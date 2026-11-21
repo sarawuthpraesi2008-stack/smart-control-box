@@ -35,7 +35,7 @@ function loadConfig() {
 function saveConfig() { localStorage.setItem(STORAGE_KEY + '_cfg', JSON.stringify(state.config)); }
 function loadLogs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY + '_logs') || '[]'); } catch (e) { return []; } }
 function saveLogs() { localStorage.setItem(STORAGE_KEY + '_logs', JSON.stringify(state.logs.slice(0, 150))); }
-function esc(s) { return String(s).replace(/[&<>"']/g, m => ({ '&':'&','<':'<','>':'>','"':'"',"'":''' }[m])); }
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; } 
 
 function hhmmToSec(hhmm) {
   if (!hhmm || !hhmm.includes(':')) return '';
