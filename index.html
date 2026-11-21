@@ -34,6 +34,7 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-emerald-500 selection:text-black">
 
+  <!-- TOP INSTRUMENT BAR -->
   <header class="sticky top-0 z-30 bg-[#09090b]/90 backdrop-blur-md border-b border-zinc-800/80">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3">
@@ -66,6 +67,7 @@
 
   <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-grow">
 
+    <!-- OFFLINE STRIP -->
     <div id="offlineAlert" class="hidden rounded-lg bg-red-950/60 border border-red-500/40 px-4 py-3 flex items-center justify-between gap-3">
       <div class="text-xs text-red-200">
         <span class="font-bold text-red-400">OFFLINE:</span>
@@ -74,6 +76,7 @@
       <button id="btnRetrySync" type="button" class="mono text-[11px] px-3 py-1 rounded bg-red-500/20 text-red-100 border border-red-500/40 cursor-pointer shrink-0">RETRY</button>
     </div>
 
+    <!-- PRIMARY DECK -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
       <section class="lg:col-span-8 space-y-3">
         <div class="flex items-center justify-between">
@@ -120,6 +123,7 @@
       </aside>
     </div>
 
+    <!-- ACTIVITY LOG STREAM -->
     <section class="hw-card rounded-xl overflow-hidden">
       <div class="px-5 py-3.5 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
@@ -158,7 +162,7 @@
 
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- SCHEDULE MODAL -->
+  <!-- SCHEDULE MODAL (V6-V9) -->
   <div id="scheduleModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="hw-card rounded-xl max-w-md w-full p-6 space-y-5 shadow-2xl">
       <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
@@ -273,7 +277,12 @@
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY + '_cfg') || 'null');
         if (saved && Array.isArray(saved.channels) && saved.channels.length === 4) {
-          saved.channels = saved.channels.map((c, i) => ({ ...DEFAULT_CHANNELS[i], ...c, schedPin: DEFAULT_CHANNELS[i].schedPin, pending: false }));
+          saved.channels = saved.channels.map((c, i) => ({
+            ...DEFAULT_CHANNELS[i],
+            ...c,
+            schedPin: DEFAULT_CHANNELS[i].schedPin,
+            pending: false
+          }));
           return saved;
         }
       } catch {}
@@ -297,7 +306,6 @@
       return String(Math.floor(n / 3600)).padStart(2, '0') + ':' + String(Math.floor((n % 3600) / 60)).padStart(2, '0');
     }
 
-    // แปลงค่า V6-V9 ที่ได้จาก Blynk REST API (Array [startSec, stopSec, tz, days, offset])
     function parseBlynkTimeInput(raw) {
       if (!Array.isArray(raw)) return null;
       const start = secToHhmm(raw[0]);
