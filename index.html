@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Control Box — ESP32 4-CH Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #07090e;
+      --border-subtle: rgba(148, 163, 184, 0.12);
+      --border-highlight: rgba(255, 255, 255, 0.08);
+    }
+    body {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      background-color: var(--bg-canvas);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.06) 0%, transparent 55%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+      color: #e2e8f0;
+    }
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .panel-surface {
+      background: linear-gradient(180deg, rgba(20, 27, 43, 0.85) 0%, rgba(14, 19, 31, 0.95) 100%);
+      border: 1px solid var(--border-subtle);
+      box-shadow: inset 0 1px 0 0 var(--border-highlight), 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+    }
+    .relay-card-on {
+      background: linear-gradient(160deg, rgba(6, 78, 59, 0.28) 0%, rgba(14, 19, 31, 0.95) 65%);
+      border-color: rgba(16, 185, 129, 0.45);
+      box-shadow: inset 0 1px 0 0 rgba(52, 211, 153, 0.25), 0 0 28px -6px rgba(16, 185, 129, 0.2);
+    }
+    .rocker-track { transition: background-color 0.25s ease, border-color 0.25s ease; }
+    .rocker-thumb { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.25s ease; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- TOP COMMAND HEADER -->
+  <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="relative w-9 h-9 rounded-lg bg-slate-900 border border-slate-700/80 flex items-center justify-center text-emerald-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">SMART CONTROL BOX</h1>
+            <span class="hidden sm:inline-block text-[10px] font-mono-tech uppercase tracking-wider bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded border border-slate-700/70">V0–V5 SYNC</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">ESP32 4-Channel Relay • Manual & Auto Running Light</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <button id="btnToggleMode" type="button" class="px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-semibold border transition-all flex items-center gap-2 bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 cursor-pointer">
+          <span id="modeDot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          <span id="modeLabel">SIMULATION</span>
+        </button>
+
+        <div id="deviceStatusBadge" class="px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-bold border flex items-center gap-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+          <span id="deviceStatusDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="deviceStatusText">ONLINE</span>
+        </div>
+
+        <button id="btnOpenSettings" type="button" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 text-slate-300 hover:text-white transition cursor-pointer" aria-label="ตั้งค่าการเชื่อมต่อ">
+          <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-grow">
+
+    <!-- OFFLINE ALERT BANNER -->
+    <div id="offlineAlert" class="hidden rounded-xl bg-red-950/70 border border-red-500/50 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-start sm:items-center gap-3">
+        <div class="p-2 rounded-lg bg-red-500/20 text-red-400 shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-red-200">บอร์ดควบคุมออฟไลน์ (ESP32 OFFLINE)</h3>
+          <p id="offlineAlertDetail" class="text-xs text-red-300/80 mt-0.5">สามารถกดสวิตช์หน้าตู้ (GPIO 16-19) เพื่อควบคุมแบบ Manual ได้ตามปกติ</p>
+        </div>
+      </div>
+      <button id="btnRetrySync" type="button" class="px-3.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-400/40 text-xs font-semibold text-red-100 shrink-0 transition cursor-pointer">
+        ลองเชื่อมต่อใหม่
+      </button>
+    </div>
+
+    <!-- ASYMMETRIC COMMAND DECK -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- LEFT: 4-CHANNEL BREAKER SWITCHGEAR (V0 - V3) -->
+      <section class="lg:col-span-8 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-4 rounded-full bg-emerald-500"></span>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">แผงควบคุมรีเลย์ 4 ช่อง (GPIO 26, 27, 14, 13)</h2>
+          </div>
+          <button id="btnManualSync" type="button" class="text-xs text-slate-400 hover:text-emerald-400 flex items-center gap-1.5 transition font-medium cursor-pointer">
+            <svg id="syncIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            ซิงค์สถานะ
+          </button>
+        </div>
+
+        <div id="channelGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </section>
+
+      <!-- RIGHT: TELEMETRY, AUTO RUNNING LIGHT (V5) & MASTER CONTROL (V4) -->
+      <aside class="lg:col-span-4 space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-4 rounded-full bg-slate-600"></span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">โหมดพิเศษ & คำสั่งรวม</h2>
+        </div>
+
+        <div class="panel-surface rounded-2xl p-5 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-4">
+            <div>
+              <span class="text-xs text-slate-400 block">โหลดที่ทำงานอยู่ (Active Load)</span>
+              <div class="mt-1 flex items-baseline gap-2">
+                <span id="activeCount" class="text-4xl font-bold font-mono-tech text-emerald-400">0</span>
+                <span class="text-sm font-mono-tech text-slate-500">/ 4 CH</span>
+              </div>
+            </div>
+            <div id="miniLoadBars" class="flex items-end gap-1.5 h-10 px-2"></div>
+          </div>
+
+          <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white">โหมดไฟวิ่งอัตโนมัติ</span>
+                <span class="text-[10px] font-mono-tech px-1.5 py-0.5 rounded bg-slate-800 text-sky-400">V5</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">วิ่งไป-กลับ 1→2→3→4 (500ms)</p>
+            </div>
+            <button 
+              id="btnAutoMode"
+              type="button"
+              role="switch"
+              aria-checked="false"
+              class="rocker-track relative inline-flex h-7 shrink-0 items-center rounded-full border p-1 bg-slate-900 border-slate-700 cursor-pointer"
+              style="width: 3.25rem;">
+              <span id="autoModeThumb" class="rocker-thumb pointer-events-none inline-block h-4 w-4 rounded-full bg-slate-500 translate-x-0"></span>
+            </button>
+          </div>
+
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>ควบคุมรวมทุกช่อง (Master V4)</span>
+              <span id="lastSyncTime" class="font-mono-tech text-slate-500">--:--:--</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button id="btnAllOn" type="button" class="py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold tracking-wide transition cursor-pointer">
+                ALL ON (เปิดหมด)
+              </button>
+              <button id="btnAllOffPrompt" type="button" class="py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold tracking-wide shadow-lg shadow-red-950/50 transition cursor-pointer">
+                ALL OFF (ปิดหมด)
+              </button>
+            </div>
+          </div>
+
+          <div id="simUtilityBox" class="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+            <span class="text-[11px] text-slate-500">ทดสอบระบบ:</span>
+            <button id="btnSimDrop" type="button" class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-medium text-amber-300/90 transition cursor-pointer">
+              จำลองบอร์ดหลุด (Offline)
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ACTIVITY LOG CONSOLE -->
+    <section class="panel-surface rounded-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-2 h-2 rounded-full bg-sky-400"></div>
+          <h2 class="text-sm font-bold text-white">บันทึกเหตุการณ์และการสั่งงาน (System Event Log)</h2>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="logFilter" class="bg-slate-950 border border-slate-700/80 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none">
+            <option value="ALL">ทั้งหมด (All)</option>
+            <option value="SUCCESS">สำเร็จ (OK)</option>
+            <option value="ERROR">ผิดพลาด (ERR)</option>
+          </select>
+          <button id="btnExportCsv" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-xs font-medium text-slate-300 transition cursor-pointer">
+            Export CSV
+          </button>
+          <button id="btnClearLogs" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-red-950/70 border border-slate-700/80 text-xs font-medium text-slate-400 hover:text-red-300 transition cursor-pointer">
+            ล้างประวัติ
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto max-h-72">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-950/80 text-slate-400 text-[11px] uppercase font-mono-tech sticky top-0 z-10">
+            <tr>
+              <th class="py-2.5 px-5 border-b border-slate-800">เวลา</th>
+              <th class="py-2.5 px-4 border-b border-slate-800">ช่อง / เป้าหมาย</th>
+              <th class="py-2.5 px-4 border-b border-slate-800">รายละเอียดคำสั่ง</th>
+              <th class="py-2.5 px-4 border-b border-slate-800 hidden sm:table-cell">แหล่งที่มา</th>
+              <th class="py-2.5 px-5 border-b border-slate-800 text-right">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody" class="divide-y divide-slate-800/50 text-xs"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-800/70 bg-[#06080d] py-3 px-4 sm:px-6 lg:px-8 text-[11px] text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span>SMART CONTROL BOX • ESP32 + BLYNK + GOOGLE SHEETS</span>
+      <span id="sheetSyncStatus" class="font-mono-tech text-slate-500">Google Sheets Log: ไม่ได้เชื่อมต่อ</span>
+    </div>
+  </footer>
+
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="panel-surface rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">ตั้งค่าการเชื่อมต่อ API และอุปกรณ์</h3>
+          <p class="text-[11px] text-slate-400">ข้อมูลถูกเก็บใน LocalStorage ของเบราว์เซอร์เครื่องนี้เท่านั้น</p>
+        </div>
+        <button id="btnCloseSettingsX" type="button" class="w-8 h-8 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">×</button>
+      </div>
+
+      <div class="space-y-3.5 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Blynk Server Domain</label>
+            <input id="cfgServer" type="text" placeholder="blynk.cloud" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-mono-tech text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Blynk Auth Token</label>
+            <input id="cfgToken" type="password" placeholder="วาง Token จาก Blynk" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-mono-tech text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Google Apps Script Web App URL (สำหรับส่ง Log ลง Sheets)</label>
+          <input id="cfgGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 font-mono-tech text-xs focus:border-emerald-500 focus:outline-none" />
+        </div>
+
+        <div class="border-t border-slate-800 pt-3">
+          <label class="block text-xs font-semibold text-slate-400 mb-2">ตั้งชื่ออุปกรณ์ทั้ง 4 ช่อง (ตรงกับ Virtual Pin V0 - V3)</label>
+          <div id="channelConfigInputs" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+        <button id="btnCancelSettings" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer">ยกเลิก</button>
+        <button id="btnSaveSettings" type="button" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white cursor-pointer">บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM ALL OFF MODAL -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="panel-surface border-red-500/40 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-base font-bold text-red-400">ยืนยันตัดไฟทุกช่อง (ALL OFF)?</h3>
+      <p class="text-xs text-slate-300 leading-relaxed">ระบบจะส่งคำสั่ง V4=0 เพื่อปิดรีเลย์ทั้ง 4 ช่องและหยุดโหมดไฟวิ่งทันที</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnCancelConfirm" type="button" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer">ยกเลิก</button>
+        <button id="btnConfirmAllOff" type="button" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white cursor-pointer">ยืนยันปิดทั้งหมด</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_CONFIG = {
+      mode: 'SIMULATION',
+      server: 'blynk.cloud',
+      token: '',
+      gasUrl: '',
+      channels: [
+        { id: 1, name: 'ช่องที่ 1 (GPIO 26)', pin: 'V0', state: false, pending: false },
+        { id: 2, name: 'ช่องที่ 2 (GPIO 27)', pin: 'V1', state: false, pending: false },
+        { id: 3, name: 'ช่องที่ 3 (GPIO 14)', pin: 'V2', state: false, pending: false },
+        { id: 4, name: 'ช่องที่ 4 (GPIO 13)', pin: 'V3', state: false, pending: false }
+      ]
+    };
+
+    class IoTController {
+      constructor(storageKey = 'smart_control_box_esp32_v2') {
+        this.storageKey = storageKey;
+        this.isOnline = true;
+        this.autoMode = false;
+        this.simTimer = null;
+        this.simStep = 0;
+        this.simDir = 1;
+        this.lastSync = null;
+        this.logs = [];
+        this.config = this.loadConfig();
+        this.loadLogs();
+      }
+
+      loadConfig() {
+        try {
+          const saved = localStorage.getItem(this.storageKey + '_cfg');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.channels) && parsed.channels.length === 4) {
+              parsed.channels = parsed.channels.map(ch => ({ ...ch, pending: false }));
+              return parsed;
+            }
+          }
+        } catch (e) {}
+        return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      }
+
+      saveConfig() {
+        localStorage.setItem(this.storageKey + '_cfg', JSON.stringify(this.config));
+      }
+
+      loadLogs() {
+        try {
+          const saved = localStorage.getItem(this.storageKey + '_logs');
+          if (saved) this.logs = JSON.parse(saved);
+        } catch (e) { this.logs = []; }
+      }
+
+      saveLogs() {
+        if (this.logs.length > 200) this.logs = this.logs.slice(0, 200);
+        localStorage.setItem(this.storageKey + '_logs', JSON.stringify(this.logs));
+      }
+
+      addLog(channelLabel, action, source, status) {
+        const now = new Date();
+        const timeShort = now.toLocaleTimeString('th-TH', { hour12: false });
+        const dateStr = now.toLocaleDateString('th-TH');
+        this.logs.unshift({
+          id: Date.now() + Math.random(),
+          timeShort,
+          dateStr,
+          time: `${dateStr} ${timeShort}`,
+          channel: channelLabel,
+          action,
+          source,
+          status
+        });
+        this.saveLogs();
+
+        if (this.config.gasUrl) {
+          fetch(this.config.gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel: channelLabel, action, source, status })
+          }).catch(() => {});
+        }
+      }
+
+      async syncDeviceStatus() {
+        if (this.config.mode === 'SIMULATION') {
+          this.lastSync = new Date();
+          return { online: this.isOnline };
+        }
+
+        if (!this.config.token) {
+          this.isOnline = false;
+          return { online: false, reason: 'กรุณาใส่ Blynk Auth Token ในหน้าตั้งค่า' };
+        }
+
+        try {
+          const baseUrl = `https://${this.config.server}/external/api`;
+          const connRes = await fetch(`${baseUrl}/isHardwareConnected?token=${encodeURIComponent(this.config.token)}`);
+          if (!connRes.ok) throw new Error(`HTTP ${connRes.status}`);
+          const isConnected = await connRes.json();
+
+          const prevOnline = this.isOnline;
+          this.isOnline = Boolean(isConnected);
+          this.lastSync = new Date();
+
+          if (prevOnline && !this.isOnline) {
+            this.addLog('SYSTEM', 'บอร์ดขาดการเชื่อมต่อ (Offline)', 'Blynk Cloud', 'ERROR');
+          } else if (!prevOnline && this.isOnline) {
+            this.addLog('SYSTEM', 'บอร์ดกลับมาออนไลน์ (Online)', 'Blynk Cloud', 'SUCCESS');
+          }
+
+          if (this.isOnline) {
+            const pins = [...this.config.channels.map(c => c.pin), 'V5'].join('&');
+            const getRes = await fetch(`${baseUrl}/get?token=${encodeURIComponent(this.config.token)}&${pins}`);
+            if (getRes.ok) {
+              const data = await getRes.json();
+              this.config.channels.forEach(ch => {
+                if (!ch.pending && data[ch.pin] !== undefined) {
+                  ch.state = Number(data[ch.pin]) === 1;
+                }
+              });
+              if (data['V5'] !== undefined) {
+                this.autoMode = Number(data['V5']) === 1;
+              }
+            }
+          }
+          return { online: this.isOnline };
+        } catch (err) {
+          this.isOnline = false;
+          return { online: false, reason: err.message };
+        }
+      }
+
+      async toggleChannel(channelId, targetState = null, source = 'Web Console') {
+        const ch = this.config.channels.find(c => c.id === channelId);
+        if (!ch || ch.pending) return { ok: false, reason: 'กำลังส่งคำสั่งก่อนหน้า' };
+
+        const nextState = targetState !== null ? targetState : !ch.state;
+        const actionText = nextState ? 'สั่งเปิด (ON)' : 'สั่งปิด (OFF)';
+        const chTag = `CH${ch.id} • ${ch.name}`;
+
+        if (!this.isOnline) {
+          this.addLog(chTag, `${actionText} — ล้มเหลว (Offline)`, source, 'ERROR');
+          return { ok: false, reason: 'บอร์ด Offline' };
+        }
+
+        if (this.autoMode) {
+          this.stopSimAutoMode();
+          this.autoMode = false;
+        }
+
+        ch.pending = true;
+        try {
+          if (this.config.mode === 'SIMULATION') {
+            await new Promise(r => setTimeout(r, 150));
+            ch.state = nextState;
+            this.addLog(chTag, actionText, source, 'SUCCESS');
+            return { ok: true, state: ch.state };
+          } else {
+            const val = nextState ? 1 : 0;
+            const url = `https://${this.config.server}/external/api/update?token=${encodeURIComponent(this.config.token)}&${ch.pin}=${val}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`API Error (${res.status})`);
+            ch.state = nextState;
+            this.addLog(chTag, actionText, source, 'SUCCESS');
+            return { ok: true, state: ch.state };
+          }
+        } catch (err) {
+          this.addLog(chTag, `${actionText} — ผิดพลาด: ${err.message}`, source, 'ERROR');
+          return { ok: false, reason: err.message };
+        } finally {
+          ch.pending = false;
+        }
+      }
+
+      async setMasterV4(stateVal) {
+        if (!this.isOnline) return { ok: false, reason: 'บอร์ด Offline' };
+        const turnOn = stateVal === 1;
+        this.stopSimAutoMode();
+        this.autoMode = false;
+
+        if (this.config.mode === 'SIMULATION') {
+          this.config.channels.forEach(c => c.state = turnOn);
+          this.addLog('MASTER (V4)', turnOn ? 'สั่งเปิดทั้งหมด (ALL ON)' : 'สั่งปิดทั้งหมด (ALL OFF)', 'Master Control', 'SUCCESS');
+          return { ok: true };
+        } else {
+          try {
+            const url = `https://${this.config.server}/external/api/update?token=${encodeURIComponent(this.config.token)}&V4=${stateVal}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`API Error (${res.status})`);
+            this.config.channels.forEach(c => c.state = turnOn);
+            this.addLog('MASTER (V4)', turnOn ? 'สั่งเปิดทั้งหมด (ALL ON)' : 'สั่งปิดทั้งหมด (ALL OFF)', 'Master Control', 'SUCCESS');
+            return { ok: true };
+          } catch (err) {
+            this.addLog('MASTER (V4)', `ผิดพลาด: ${err.message}`, 'Master Control', 'ERROR');
+            return { ok: false, reason: err.message };
+          }
+        }
+      }
+
+      async setAutoModeV5(enable) {
+        if (!this.isOnline) return { ok: false, reason: 'บอร์ด Offline' };
+        
+        if (this.config.mode === 'SIMULATION') {
+          this.autoMode = enable;
+          if (enable) {
+            this.startSimAutoMode();
+          } else {
+            this.stopSimAutoMode();
+            this.config.channels.forEach(c => c.state = false);
+          }
+          this.addLog('AUTO MODE (V5)', enable ? 'เปิดโหมดไฟวิ่งอัตโนมัติ' : 'ปิดโหมดไฟวิ่งอัตโนมัติ', 'Web Console', 'SUCCESS');
+          return { ok: true };
+        } else {
+          try {
+            const url = `https://${this.config.server}/external/api/update?token=${encodeURIComponent(this.config.token)}&V5=${enable ? 1 : 0}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`API Error (${res.status})`);
+            this.autoMode = enable;
+            if (!enable) this.config.channels.forEach(c => c.state = false);
+            this.addLog('AUTO MODE (V5)', enable ? 'เปิดโหมดไฟวิ่งอัตโนมัติ' : 'ปิดโหมดไฟวิ่งอัตโนมัติ', 'Web Console', 'SUCCESS');
+            return { ok: true };
+          } catch (err) {
+            return { ok: false, reason: err.message };
+          }
+        }
+      }
+
+      startSimAutoMode() {
+        this.stopSimAutoMode();
+        this.simStep = 0;
+        this.simDir = 1;
+        this.simTimer = setInterval(() => {
+          this.config.channels.forEach((c, idx) => c.state = (idx === this.simStep));
+          if (this.simStep >= 3) this.simDir = -1;
+          else if (this.simStep <= 0) this.simDir = 1;
+          this.simStep += this.simDir;
+          ui.renderChannels();
+          ui.renderSummary();
+        }, 500);
+      }
+
+      stopSimAutoMode() {
+        if (this.simTimer) {
+          clearInterval(this.simTimer);
+          this.simTimer = null;
+        }
+      }
+    }
+
+    const controller = new IoTController();
+
+    const ui = {
+      showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        const colors = type === 'error'
+          ? 'bg-red-950/95 border-red-500/50 text-red-200'
+          : type === 'success'
+            ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200'
+            : 'bg-slate-900/95 border-slate-700 text-slate-200';
+        el.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-xl backdrop-blur-md transition-all duration-300 ${colors}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+      },
+
+      renderAll() {
+        this.renderHeader();
+        this.renderChannels();
+        this.renderSummary();
+        this.renderLogs();
+      },
+
+      renderHeader() {
+        const isSim = controller.config.mode === 'SIMULATION';
+        const modeBtn = document.getElementById('btnToggleMode');
+        const modeDot = document.getElementById('modeDot');
+        const modeLabel = document.getElementById('modeLabel');
+        const simBox = document.getElementById('simUtilityBox');
+
+        if (isSim) {
+          modeBtn.className = 'px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-semibold border transition-all flex items-center gap-2 bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 cursor-pointer';
+          modeDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+          modeLabel.textContent = 'SIMULATION';
+          simBox.classList.remove('hidden');
+        } else {
+          modeBtn.className = 'px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-semibold border transition-all flex items-center gap-2 bg-sky-500/10 border-sky-500/30 text-sky-300 hover:bg-sky-500/20 cursor-pointer';
+          modeDot.className = 'w-1.5 h-1.5 rounded-full bg-sky-400';
+          modeLabel.textContent = 'LIVE BLYNK';
+          simBox.classList.add('hidden');
+        }
+
+        const badge = document.getElementById('deviceStatusBadge');
+        const dot = document.getElementById('deviceStatusDot');
+        const text = document.getElementById('deviceStatusText');
+        const alertBanner = document.getElementById('offlineAlert');
+
+        if (controller.isOnline) {
+          badge.className = 'px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-bold border flex items-center gap-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          text.textContent = 'ONLINE';
+          alertBanner.classList.add('hidden');
+        } else {
+          badge.className = 'px-3 py-1.5 rounded-lg text-[11px] font-mono-tech font-bold border flex items-center gap-2 bg-red-500/15 border-red-500/40 text-red-400';
+          dot.className = 'w-2 h-2 rounded-full bg-red-500';
+          text.textContent = 'OFFLINE';
+          alertBanner.classList.remove('hidden');
+        }
+
+        const sheetEl = document.getElementById('sheetSyncStatus');
+        if (controller.config.gasUrl) {
+          sheetEl.textContent = 'Google Sheets Log: เชื่อมต่อแล้ว ✓';
+          sheetEl.className = 'font-mono-tech text-emerald-400';
+        } else {
+          sheetEl.textContent = 'Google Sheets Log: เก็บในเครื่อง (Local)';
+          sheetEl.className = 'font-mono-tech text-slate-500';
+        }
+      },
+
+      renderSummary() {
+        const active = controller.config.channels.filter(c => c.state).length;
+        document.getElementById('activeCount').textContent = active;
+        if (controller.lastSync) {
+          document.getElementById('lastSyncTime').textContent = controller.lastSync.toLocaleTimeString('th-TH', { hour12: false });
+        }
+
+        const autoBtn = document.getElementById('btnAutoMode');
+        const autoThumb = document.getElementById('autoModeThumb');
+        autoBtn.setAttribute('aria-checked', controller.autoMode);
+        if (controller.autoMode) {
+          autoBtn.className = 'rocker-track relative inline-flex h-7 shrink-0 items-center rounded-full border p-1 bg-sky-500/25 border-sky-400/60 cursor-pointer';
+          autoThumb.className = 'rocker-thumb pointer-events-none inline-block h-4 w-4 rounded-full bg-sky-400 translate-x-6 shadow-[0_0_8px_rgba(56,189,248,0.8)]';
+        } else {
+          autoBtn.className = 'rocker-track relative inline-flex h-7 shrink-0 items-center rounded-full border p-1 bg-slate-900 border-slate-700 cursor-pointer';
+          autoThumb.className = 'rocker-thumb pointer-events-none inline-block h-4 w-4 rounded-full bg-slate-500 translate-x-0';
+        }
+
+        const barsContainer = document.getElementById('miniLoadBars');
+        barsContainer.innerHTML = controller.config.channels.map((ch, idx) => {
+          const heights = ['h-4', 'h-6', 'h-8', 'h-10'];
+          const color = ch.state ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-slate-800';
+          return `<div class="w-2 ${heights[idx]} rounded-sm transition-all duration-150 ${color}"></div>`;
+        }).join('');
+      },
+
+      renderChannels() {
+        const grid = document.getElementById('channelGrid');
+        const isOffline = !controller.isOnline;
+
+        grid.innerHTML = controller.config.channels.map(ch => {
+          const isOn = ch.state;
+          const isPending = ch.pending;
+          const cardClass = isOn ? 'panel-surface relay-card-on' : 'panel-surface';
+          const indicatorStrip = isOn ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]' : 'bg-slate-700';
+          const statusText = isPending
+            ? '<span class="text-amber-400 animate-pulse">SYNCING...</span>'
+            : isOn
+              ? '<span class="text-emerald-400">ACTIVE • ON</span>'
+              : '<span class="text-slate-500">STANDBY • OFF</span>';
+
+          const trackBg = isOn ? 'bg-emerald-500/25 border-emerald-400/60' : 'bg-slate-950 border-slate-700/80';
+          const thumbPos = isOn ? 'translate-x-7 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]' : 'translate-x-0 bg-slate-500';
+          const disabledAttr = (isPending || isOffline) ? 'disabled' : '';
+          const cursorClass = isPending ? 'cursor-wait opacity-70' : isOffline ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-slate-500';
+
+          return `
+            <div class="rounded-2xl p-5 relative overflow-hidden transition-all duration-200 ${cardClass}">
+              <div class="absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-all duration-200 ${indicatorStrip}"></div>
+              <div class="pl-2 flex flex-col justify-between h-full space-y-5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-slate-950/90 border border-slate-800 font-mono-tech text-xs font-bold text-slate-300">CH 0${ch.id}</span>
+                    <span class="font-mono-tech text-[11px] text-emerald-400/80">${this.escapeHtml(ch.pin)}</span>
+                  </div>
+                  <div class="font-mono-tech text-[11px] font-bold tracking-wider">${statusText}</div>
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-white tracking-tight leading-snug">${this.escapeHtml(ch.name)}</h3>
+                </div>
+                <div class="pt-3 border-t border-slate-800/70 flex items-center justify-between">
+                  <span class="text-[11px] text-slate-400 font-medium">${isOffline ? 'ล็อกคำสั่ง (Offline)' : (isOn ? 'จ่ายไฟเข้าวงจร' : 'ตัดวงจรไฟฟ้า')}</span>
+                  <button type="button" role="switch" aria-checked="${isOn}" data-channel-id="${ch.id}" ${disabledAttr}
+                    class="channel-switch-btn rocker-track relative inline-flex h-8 shrink-0 items-center rounded-full border p-1 transition ${trackBg} ${cursorClass}" style="width: 3.75rem;">
+                    <span class="rocker-thumb pointer-events-none inline-block h-5 w-5 rounded-full ${thumbPos}"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      renderLogs() {
+        const filter = document.getElementById('logFilter').value;
+        const tbody = document.getElementById('logTableBody');
+        const filtered = controller.logs.filter(log => filter === 'ALL' || log.status === filter);
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-slate-500 text-xs">ไม่มีรายการบันทึกในหมวดหมู่นี้</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(log => {
+          const badge = log.status === 'SUCCESS'
+            ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-tech font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">OK</span>'
+            : log.status === 'ERROR'
+              ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-tech font-semibold bg-red-500/10 text-red-400 border border-red-500/25">ERR</span>'
+              : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-tech font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25">WARN</span>';
+
+          return `
+            <tr class="hover:bg-slate-800/30 transition-colors">
+              <td class="py-2.5 px-5 font-mono-tech text-slate-300 whitespace-nowrap" title="${log.dateStr || ''}">${log.timeShort || log.time}</td>
+              <td class="py-2.5 px-4 font-semibold text-slate-200 whitespace-nowrap">${this.escapeHtml(log.channel)}</td>
+              <td class="py-2.5 px-4 text-slate-300">${this.escapeHtml(log.action)}</td>
+              <td class="py-2.5 px-4 text-slate-500 hidden sm:table-cell">${this.escapeHtml(log.source)}</td>
+              <td class="py-2.5 px-5 text-right">${badge}</td>
+            </tr>
+          `;
+        }).join('');
+      },
+
+      openSettingsModal() {
+        document.getElementById('cfgServer').value = controller.config.server;
+        document.getElementById('cfgToken').value = controller.config.token;
+        document.getElementById('cfgGasUrl').value = controller.config.gasUrl || '';
+        
+        const container = document.getElementById('channelConfigInputs');
+        container.innerHTML = controller.config.channels.map(ch => `
+          <div class="grid grid-cols-12 gap-2 items-center">
+            <span class="col-span-2 font-mono-tech text-xs text-slate-400">CH 0${ch.id}</span>
+            <input id="cfgName_${ch.id}" type="text" value="${this.escapeHtml(ch.name)}" class="col-span-8 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none" />
+            <input id="cfgPin_${ch.id}" type="text" value="${this.escapeHtml(ch.pin)}" class="col-span-2 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-mono-tech text-center text-emerald-400 focus:border-emerald-500 focus:outline-none" />
+          </div>
+        `).join('');
+
+        document.getElementById('settingsModal').classList.remove('hidden');
+      },
+
+      closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); },
+
+      saveSettings() {
+        controller.config.server = document.getElementById('cfgServer').value.trim() || 'blynk.cloud';
+        controller.config.token = document.getElementById('cfgToken').value.trim();
+        controller.config.gasUrl = document.getElementById('cfgGasUrl').value.trim();
+        
+        controller.config.channels.forEach(ch => {
+          const newName = document.getElementById(`cfgName_${ch.id}`).value.trim();
+          const newPin = document.getElementById(`cfgPin_${ch.id}`).value.trim();
+          if (newName) ch.name = newName;
+          if (newPin) ch.pin = newPin;
+        });
+
+        controller.saveConfig();
+        controller.addLog('SYSTEM', 'บันทึกการตั้งค่า API และอุปกรณ์', 'Settings', 'SUCCESS');
+        this.closeSettingsModal();
+        this.showToast('บันทึกการตั้งค่าเรียบร้อยแล้ว', 'success');
+        app.syncNow();
+      },
+
+      confirmAllOff() { document.getElementById('confirmModal').classList.remove('hidden'); },
+      closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); },
+      escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[m])); }
+    };
+
+    const app = {
+      isSyncing: false,
+
+      async handleToggle(id) {
+        const target = controller.config.channels.find(c => c.id === id);
+        if (!target || target.pending) return;
+
+        const promise = controller.toggleChannel(id);
+        ui.renderChannels();
+        const res = await promise;
+        ui.renderAll();
+
+        if (res.ok) {
+          ui.showToast(`CH0${id}: ${res.state ? 'เปิด (ON)' : 'ปิด (OFF)'}`, 'success');
+        } else {
+          ui.showToast(res.reason, 'error');
+        }
+      },
+
+      async toggleAutoMode() {
+        const res = await controller.setAutoModeV5(!controller.autoMode);
+        ui.renderAll();
+        if (res.ok) {
+          ui.showToast(controller.autoMode ? 'เปิดโหมดไฟวิ่งอัตโนมัติ (V5)' : 'ปิดโหมดไฟวิ่งอัตโนมัติ', 'info');
+        } else {
+          ui.showToast(res.reason, 'error');
+        }
+      },
+
+      async executeMaster(stateVal) {
+        ui.closeConfirmModal();
+        const res = await controller.setMasterV4(stateVal);
+        ui.renderAll();
+        if (res.ok) {
+          ui.showToast(stateVal === 1 ? 'เปิดทุกช่อง (ALL ON) เรียบร้อย' : 'ตัดไฟทุกช่อง (ALL OFF) เรียบร้อย', 'info');
+        } else {
+          ui.showToast(res.reason, 'error');
+        }
+      },
+
+      async toggleMode() {
+        controller.config.mode = controller.config.mode === 'SIMULATION' ? 'LIVE' : 'SIMULATION';
+        controller.saveConfig();
+        controller.stopSimAutoMode();
+        if (controller.config.mode === 'SIMULATION') controller.isOnline = true;
+        ui.showToast(`สลับโหมดเป็น ${controller.config.mode}`, 'info');
+        await this.syncNow();
+      },
+
+      simulateConnectionDrop() {
+        if (controller.config.mode !== 'SIMULATION') return;
+        controller.isOnline = !controller.isOnline;
+        const msg = controller.isOnline ? 'จำลองบอร์ดออนไลน์ (ONLINE)' : 'จำลองบอร์ดหลุดการเชื่อมต่อ (OFFLINE)';
+        controller.addLog('SYSTEM', msg, 'Simulator', controller.isOnline ? 'SUCCESS' : 'ERROR');
+        ui.renderAll();
+        ui.showToast(msg, controller.isOnline ? 'success' : 'error');
+      },
+
+      async syncNow() {
+        if (this.isSyncing) return;
+        this.isSyncing = true;
+        const icon = document.getElementById('syncIcon');
+        if (icon) icon.classList.add('animate-spin');
+        try {
+          const res = await controller.syncDeviceStatus();
+          if (!res.online && res.reason) {
+            document.getElementById('offlineAlertDetail').textContent = `สาเหตุ: ${res.reason}`;
+          }
+          ui.renderAll();
+        } finally {
+          this.isSyncing = false;
+          if (icon) setTimeout(() => icon.classList.remove('animate-spin'), 300);
+        }
+      },
+
+      clearLogs() {
+        controller.logs = [];
+        controller.saveLogs();
+        ui.renderLogs();
+        ui.showToast('ล้างประวัติในเครื่องแล้ว', 'info');
+      },
+
+      exportLogsCSV() {
+        if (controller.logs.length === 0) return ui.showToast('ไม่มีข้อมูล Log', 'error');
+        const header = 'Timestamp,Channel,Action,Source,Status\n';
+        const rows = controller.logs.map(l => `"${l.time}","${l.channel}","${l.action}","${l.source}","${l.status}"`).join('\n');
+        const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `smart-control-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    // ผูก Event Listeners ทั้งหมดอย่างปลอดภัย
+    function bindEvents() {
+      document.getElementById('btnOpenSettings').addEventListener('click', () => ui.openSettingsModal());
+      document.getElementById('btnCloseSettingsX').addEventListener('click', () => ui.closeSettingsModal());
+      document.getElementById('btnCancelSettings').addEventListener('click', () => ui.closeSettingsModal());
+      document.getElementById('btnSaveSettings').addEventListener('click', () => ui.saveSettings());
+
+      document.getElementById('btnToggleMode').addEventListener('click', () => app.toggleMode());
+      document.getElementById('btnManualSync').addEventListener('click', () => app.syncNow());
+      document.getElementById('btnRetrySync').addEventListener('click', () => app.syncNow());
+      document.getElementById('btnAutoMode').addEventListener('click', () => app.toggleAutoMode());
+      document.getElementById('btnAllOn').addEventListener('click', () => app.executeMaster(1));
+      document.getElementById('btnAllOffPrompt').addEventListener('click', () => ui.confirmAllOff());
+      document.getElementById('btnCancelConfirm').addEventListener('click', () => ui.closeConfirmModal());
+      document.getElementById('btnConfirmAllOff').addEventListener('click', () => app.executeMaster(0));
+      document.getElementById('btnSimDrop').addEventListener('click', () => app.simulateConnectionDrop());
+
+      document.getElementById('logFilter').addEventListener('change', () => ui.renderLogs());
+      document.getElementById('btnExportCsv').addEventListener('click', () => app.exportLogsCSV());
+      document.getElementById('btnClearLogs').addEventListener('click', () => app.clearLogs());
+
+      // Event Delegation สำหรับสวิตช์ทั้ง 4 ช่อง
+      document.getElementById('channelGrid').addEventListener('click', (e) => {
+        const btn = e.target.closest('.channel-switch-btn');
+        if (btn && !btn.disabled) {
+          const chId = Number(btn.getAttribute('data-channel-id'));
+          app.handleToggle(chId);
+        }
+      });
+    }
+
+    // รันทันทีเมื่อโหลดหน้าเสร็จ
+    bindEvents();
+    ui.renderAll();
+    app.syncNow();
+    setInterval(() => app.syncNow(), 4000);
+  </script>
+</body>
+</html>
