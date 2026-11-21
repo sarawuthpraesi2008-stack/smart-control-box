@@ -42,7 +42,6 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-slate-950">
 
-  <!-- TOP COMMAND HEADER -->
   <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur-md sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3.5">
@@ -81,10 +80,7 @@
     </div>
   </header>
 
-  <!-- MAIN WORKSPACE -->
   <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-grow">
-
-    <!-- OFFLINE ALERT BANNER -->
     <div id="offlineAlert" class="hidden rounded-xl bg-red-950/70 border border-red-500/50 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex items-start sm:items-center gap-3">
         <div class="p-2 rounded-lg bg-red-500/20 text-red-400 shrink-0">
@@ -102,10 +98,7 @@
       </button>
     </div>
 
-    <!-- ASYMMETRIC COMMAND DECK -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      
-      <!-- LEFT: 4-CHANNEL BREAKER SWITCHGEAR (V0 - V3) -->
       <section class="lg:col-span-8 space-y-3">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -119,11 +112,9 @@
             ซิงค์สถานะ
           </button>
         </div>
-
         <div id="channelGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
       </section>
 
-      <!-- RIGHT: TELEMETRY, AUTO RUNNING LIGHT (V5) & MASTER CONTROL (V4) -->
       <aside class="lg:col-span-4 space-y-4">
         <div class="flex items-center gap-2">
           <span class="w-1.5 h-4 rounded-full bg-slate-600"></span>
@@ -150,13 +141,8 @@
               </div>
               <p class="text-[11px] text-slate-400 mt-0.5">วิ่งไป-กลับ 1→2→3→4 (500ms)</p>
             </div>
-            <button 
-              id="btnAutoMode"
-              type="button"
-              role="switch"
-              aria-checked="false"
-              class="rocker-track relative inline-flex h-7 shrink-0 items-center rounded-full border p-1 bg-slate-900 border-slate-700 cursor-pointer"
-              style="width: 3.25rem;">
+            <button id="btnAutoMode" type="button" role="switch" aria-checked="false"
+              class="rocker-track relative inline-flex h-7 shrink-0 items-center rounded-full border p-1 bg-slate-900 border-slate-700 cursor-pointer" style="width: 3.25rem;">
               <span id="autoModeThumb" class="rocker-thumb pointer-events-none inline-block h-4 w-4 rounded-full bg-slate-500 translate-x-0"></span>
             </button>
           </div>
@@ -186,14 +172,12 @@
       </aside>
     </div>
 
-    <!-- ACTIVITY LOG CONSOLE -->
     <section class="panel-surface rounded-2xl overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
           <div class="w-2 h-2 rounded-full bg-sky-400"></div>
           <h2 class="text-sm font-bold text-white">บันทึกเหตุการณ์และการสั่งงาน (System Event Log)</h2>
         </div>
-        
         <div class="flex flex-wrap items-center gap-2">
           <select id="logFilter" class="bg-slate-950 border border-slate-700/80 text-slate-300 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none">
             <option value="ALL">ทั้งหมด (All)</option>
@@ -235,7 +219,6 @@
 
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- SETTINGS MODAL -->
   <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="panel-surface rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -243,7 +226,7 @@
           <h3 class="text-base font-bold text-white">ตั้งค่าการเชื่อมต่อ API และอุปกรณ์</h3>
           <p class="text-[11px] text-slate-400">ข้อมูลถูกเก็บใน LocalStorage ของเบราว์เซอร์เครื่องนี้เท่านั้น</p>
         </div>
-        <button id="btnCloseSettingsX" type="button" class="w-8 h-8 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">×</button>
+        <button id="btnCloseSettingsX" type="button" class="w-8 h-8 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer">&times;</button>
       </div>
 
       <div class="space-y-3.5 text-sm">
@@ -276,7 +259,6 @@
     </div>
   </div>
 
-  <!-- CONFIRM ALL OFF MODAL -->
   <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="panel-surface border-red-500/40 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
       <h3 class="text-base font-bold text-red-400">ยืนยันตัดไฟทุกช่อง (ALL OFF)?</h3>
@@ -303,7 +285,7 @@
     };
 
     class IoTController {
-      constructor(storageKey = 'smart_control_box_esp32_v2') {
+      constructor(storageKey = 'smart_control_box_esp32_v3') {
         this.storageKey = storageKey;
         this.isOnline = true;
         this.autoMode = false;
@@ -750,7 +732,7 @@
 
       confirmAllOff() { document.getElementById('confirmModal').classList.remove('hidden'); },
       closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); },
-      escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' }[m])); }
+      escapeHtml(str) { return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
     };
 
     const app = {
@@ -849,7 +831,6 @@
       }
     };
 
-    // ผูก Event Listeners ทั้งหมดอย่างปลอดภัย
     function bindEvents() {
       document.getElementById('btnOpenSettings').addEventListener('click', () => ui.openSettingsModal());
       document.getElementById('btnCloseSettingsX').addEventListener('click', () => ui.closeSettingsModal());
@@ -870,7 +851,6 @@
       document.getElementById('btnExportCsv').addEventListener('click', () => app.exportLogsCSV());
       document.getElementById('btnClearLogs').addEventListener('click', () => app.clearLogs());
 
-      // Event Delegation สำหรับสวิตช์ทั้ง 4 ช่อง
       document.getElementById('channelGrid').addEventListener('click', (e) => {
         const btn = e.target.closest('.channel-switch-btn');
         if (btn && !btn.disabled) {
@@ -880,7 +860,6 @@
       });
     }
 
-    // รันทันทีเมื่อโหลดหน้าเสร็จ
     bindEvents();
     ui.renderAll();
     app.syncNow();
