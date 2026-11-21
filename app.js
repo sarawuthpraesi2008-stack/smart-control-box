@@ -57,7 +57,6 @@ function parseBlynkTimeInput(raw) {
   if (!start && !stop) return null;
   return { start, stop, days };
 }
-
 function toast(msg, type = 'info') {
   const el = document.createElement('div');
   const tone = type === 'error' ? 'bg-rose-600 text-white'
