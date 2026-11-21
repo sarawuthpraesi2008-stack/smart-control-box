@@ -48,14 +48,15 @@ function secToHhmm(sec) {
   const n = parseInt(sec, 10);
   return String(Math.floor(n / 3600)).padStart(2, '0') + ':' + String(Math.floor((n % 3600) / 60)).padStart(2, '0');
 }
-
 function parseBlynkTimeInput(raw) {
-  if (!Array.isArray(raw)) return null;
-  const start = secToHhmm(raw[0]);
-  const stop  = secToHhmm(raw[1]);
-  const days  = String(raw[3] || '');
+  const arr = Array.isArray(raw) ? raw : String(raw || '').split('\0');
+  if (arr.length < 2) return null;
+  const start = secToHhmm(arr[0]);
+  const stop  = secToHhmm(arr[1]);
+  const days  = String(arr[3] || '');
   if (!start && !stop) return null;
   return { start, stop, days };
+}
 }
 
 function toast(msg, type = 'info') {
@@ -133,19 +134,31 @@ async function syncDevice() {
     render();
   }
 }
+async function toggleChannel(id) {
+  const ch = state.config.channels.find(c => c.id === id);
+  if (!ch || ch.pending || !state.isOnline) return;
+  const prev = ch.state;
+  const next = !prev;
+  state.autoMode = false;
+  ch.state = next;      // ขยับสวิตช์บนหน้าจอทันที (0ms)
+  ch.pending = true;
+  render();
 
-async function fetchCloudLogs(silent = true) {
-  if (!state.config.gasUrl) return;
   try {
-    const res = await fetch(state.config.gasUrl);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (Array.isArray(data) && data.length) {
-      state.logs = data;
-      saveLogs();
-      renderLogs();
-      if (!silent) toast('อัปเดตประวัติล่าสุดแล้ว', 'success');
+    if (state.config.mode === 'LIVE') {
+      const base = `https://${state.config.server}/external/api/batch/update?token=${encodeURIComponent(state.config.token)}`;
+      const res = await fetch(`${base}&V14=Web%20Dashboard&${ch.pin}=${next ? 1 : 0}`);
+      if (!res.ok) await blynkUpdate(`${ch.pin}=${next ? 1 : 0}`);
     }
+    pushLog(`CH${ch.id} • ${ch.name}`, next ? 'สั่งเปิด (ON)' : 'สั่งปิด (OFF)');
+  } catch (e) {
+    ch.state = prev;    // คืนค่าเดิมเฉพาะตอนส่งคำสั่งไม่สำเร็จ
+    toast(`สั่งงานไม่สำเร็จ (${e.message})`, 'error');
+  } finally {
+    ch.pending = false;
+    render();
+  }
+}
   } catch (e) {
     if (!silent) toast('ดึงประวัติไม่สำเร็จ', 'error');
   }
