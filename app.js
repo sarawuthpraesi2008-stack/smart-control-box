@@ -35,7 +35,7 @@ function loadConfig() {
 function saveConfig() { localStorage.setItem(STORAGE_KEY + '_cfg', JSON.stringify(state.config)); }
 function loadLogs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY + '_logs') || '[]'); } catch (e) { return []; } }
 function saveLogs() { localStorage.setItem(STORAGE_KEY + '_logs', JSON.stringify(state.logs.slice(0, 150))); }
-function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; } 
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
 
 function hhmmToSec(hhmm) {
   if (!hhmm || !hhmm.includes(':')) return '';
@@ -48,6 +48,7 @@ function secToHhmm(sec) {
   const n = parseInt(sec, 10);
   return String(Math.floor(n / 3600)).padStart(2, '0') + ':' + String(Math.floor((n % 3600) / 60)).padStart(2, '0');
 }
+
 function parseBlynkTimeInput(raw) {
   const arr = Array.isArray(raw) ? raw : String(raw || '').split('\0');
   if (arr.length < 2) return null;
@@ -57,6 +58,7 @@ function parseBlynkTimeInput(raw) {
   if (!start && !stop) return null;
   return { start, stop, days };
 }
+
 function toast(msg, type = 'info') {
   const el = document.createElement('div');
   const tone = type === 'error' ? 'bg-rose-600 text-white'
@@ -132,13 +134,31 @@ async function syncDevice() {
     render();
   }
 }
+
+async function fetchCloudLogs(silent = true) {
+  if (!state.config.gasUrl) return;
+  try {
+    const res = await fetch(state.config.gasUrl);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data) && data.length) {
+      state.logs = data;
+      saveLogs();
+      renderLogs();
+      if (!silent) toast('อัปเดตประวัติล่าสุดแล้ว', 'success');
+    }
+  } catch (e) {
+    if (!silent) toast('ดึงประวัติไม่สำเร็จ', 'error');
+  }
+}
+
 async function toggleChannel(id) {
   const ch = state.config.channels.find(c => c.id === id);
   if (!ch || ch.pending || !state.isOnline) return;
   const prev = ch.state;
   const next = !prev;
   state.autoMode = false;
-  ch.state = next;      // ขยับสวิตช์บนหน้าจอทันที (0ms)
+  ch.state = next;
   ch.pending = true;
   render();
 
@@ -150,35 +170,7 @@ async function toggleChannel(id) {
     }
     pushLog(`CH${ch.id} • ${ch.name}`, next ? 'สั่งเปิด (ON)' : 'สั่งปิด (OFF)');
   } catch (e) {
-    ch.state = prev;    // คืนค่าเดิมเฉพาะตอนส่งคำสั่งไม่สำเร็จ
-    toast(`สั่งงานไม่สำเร็จ (${e.message})`, 'error');
-  } finally {
-    ch.pending = false;
-    render();
-  }
-}
-  } catch (e) {
-    if (!silent) toast('ดึงประวัติไม่สำเร็จ', 'error');
-  }
-}
-
-async function toggleChannel(id) {
-  const ch = state.config.channels.find(c => c.id === id);
-  if (!ch || ch.pending || !state.isOnline) return;
-  const next = !ch.state;
-  state.autoMode = false;
-  ch.pending = true;
-  renderChannels();
-
-  try {
-    if (state.config.mode === 'LIVE') {
-      await notifySource();
-      await blynkUpdate(`${ch.pin}=${next ? 1 : 0}`);
-    }
-    ch.state = next;
-    pushLog(`CH${ch.id} • ${ch.name}`, next ? 'สั่งเปิด (ON)' : 'สั่งปิด (OFF)');
-    toast(`CH0${ch.id}: ${next ? 'เปิด (ON)' : 'ปิด (OFF)'}`, 'success');
-  } catch (e) {
+    ch.state = prev;
     toast(`สั่งงานไม่สำเร็จ (${e.message})`, 'error');
   } finally {
     ch.pending = false;
@@ -261,7 +253,6 @@ function renderChannels() {
     const isOn = ch.state;
     return `
       <div class="card-soft rounded-2xl overflow-hidden flex flex-col justify-between ${isOn ? 'border-blue-400/70' : ''}">
-        <!-- White Upper Hardware Section -->
         <div class="p-4 pb-5 space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -280,7 +271,6 @@ function renderChannels() {
           </div>
         </div>
 
-        <!-- Split-Tone Bottom Strip (Blue-Cyan Gradient when ON) -->
         <div class="px-4 py-3 flex items-center justify-between text-[11px] transition-colors ${isOn ? 'card-footer-on text-white' : 'bg-slate-50 border-t border-slate-100 text-slate-600'}">
           <div class="truncate pr-2">${formatSchedule(ch.schedule, isOn)}</div>
           <button type="button" data-sched="${ch.id}" class="ch-sched font-semibold underline shrink-0 cursor-pointer ${isOn ? 'text-white hover:text-blue-100' : 'text-blue-600 hover:text-blue-800'}">ตั้งเวลา</button>
