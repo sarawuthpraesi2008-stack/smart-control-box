@@ -1,7 +1,11 @@
 'use strict';
 
 (function initApi(SCB) {
-  const { STORAGE_KEY, FETCH_TIMEOUT_MS, DEFAULT_CHANNELS, hhmmToSec, parseBlynkTimeInput, parsePzemCsv, getNextResetInfo } = SCB;
+  const {
+    STORAGE_KEY, FETCH_TIMEOUT_MS, DEFAULT_CHANNELS,
+    clampSafetyThresholds, parseSafetyThresholds, formatSafetyThresholds,
+    hhmmToSec, parseBlynkTimeInput, parsePzemCsv, getNextResetInfo,
+  } = SCB;
 
   function loadConfig() {
     try {
@@ -13,7 +17,14 @@
           schedPin: DEFAULT_CHANNELS[i].schedPin,
           pending: false,
         }));
-        return { rate: 4.5, maxAmp: 10.0, resetCycleDays: 0, lastEnergyResetAt: new Date().toISOString(), ...saved };
+        const limits = clampSafetyThresholds(saved);
+        return {
+          rate: 4.5,
+          resetCycleDays: 0,
+          lastEnergyResetAt: new Date().toISOString(),
+          ...saved,
+          ...limits,
+        };
       }
     } catch (_) {}
     return {
@@ -22,7 +33,9 @@
       token: '',
       gasUrl: '',
       rate: 4.5,
+      maxVolt: 245,
       maxAmp: 10.0,
+      maxSmoke: 60,
       resetCycleDays: 0,
       lastEnergyResetAt: new Date().toISOString(),
       channels: JSON.parse(JSON.stringify(DEFAULT_CHANNELS)),
@@ -35,7 +48,6 @@
 
   const state = {
     isOnline: true,
-    autoMode: false,
     isSyncing: false,
     lastSync: null,
     activeSchedId: 1,
@@ -62,7 +74,7 @@
     }
   }
 
-  function pushLog(channel, action, source = 'Web Dashboard', status = 'SUCCESS') {
+  function pushLog(channel, action, source = 'Web Dashboard', status = 'SUCCESS', notifyLine = false) {
     const now = new Date();
     const timeShort = now.toLocaleTimeString('th-TH', { hour12: false });
     const dateStr = now.toLocaleDateString('th-TH');
@@ -74,7 +86,7 @@
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, action, source, status }),
+        body: JSON.stringify({ channel, action, source, status, notifyLine }),
       }).catch(() => {});
     }
   }
@@ -92,7 +104,7 @@
   }
 
   async function notifySource() {
-    try { await blynkUpdate('V14=Web%20Dashboard'); } catch (_) {}
+    try { await blynkUpdate('V10=Web%20Dashboard'); } catch (_) {}
   }
 
   async function performEnergyReset(reasonLabel, sourceLabel = 'Web Dashboard') {
@@ -102,7 +114,7 @@
     const now = new Date();
 
     if (state.config.mode === 'LIVE' && state.isOnline && state.config.token) {
-      await blynkUpdate('V17=1');
+      await blynkUpdate('V13=99');
     }
 
     state.billingHistory.unshift({
@@ -130,23 +142,42 @@
     } catch (_) {}
   }
 
+  async function syncSettingsToCloud(thresholdsChanged) {
+    const csv = formatSafetyThresholds(state.config);
+    if (state.config.mode === 'LIVE' && state.config.token) {
+      try {
+        await blynkBatch(
+          `V10=Web%20Dashboard&V13=${encodeURIComponent(state.config.resetCycleDays)}&V5=${encodeURIComponent(csv)}`
+        );
+      } catch (_) {
+        if (SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V13/V5 ไป Blynk ไม่สำเร็จ', 'error');
+      }
+    }
+    if (thresholdsChanged) {
+      const msg = `อัปเดตเกณฑ์ตัดไฟ (V5): แรงดัน >= ${state.config.maxVolt}V | กระแส >= ${state.config.maxAmp.toFixed(1)}A | ควัน >= ${state.config.maxSmoke}%`;
+      pushLog('SAFETY CONFIG', msg, 'Web Dashboard', 'SUCCESS', true);
+    }
+  }
+
   async function syncDevice() {
     if (state.isSyncing) return;
     state.isSyncing = true;
     try {
       if (state.config.mode === 'SIMULATION') {
         const activeCh = state.config.channels.filter((c) => c.state).length;
-        const maxAmp = Number(state.config.maxAmp) || 10.0;
+        const simVolt = state.simFault === 'OVER_VOLT'
+          ? state.config.maxVolt + 6.5
+          : 220.2 + (Math.random() * 0.6 - 0.3);
         const simAmp = state.simFault === 'OVER_AMP'
-          ? maxAmp + 1.25
+          ? state.config.maxAmp + 1.25
           : activeCh * 1.35 + (activeCh > 0 ? Math.random() * 0.08 : 0);
-        state.power.v = 220.2 + (Math.random() * 0.6 - 0.3);
+        state.power.v = simVolt;
         state.power.c = simAmp;
-        state.power.p = state.power.v * simAmp * 0.98;
+        state.power.p = simVolt * simAmp * 0.98;
         state.power.e += (state.power.p / 1000) * (4 / 3600);
         state.power.f = 50.0;
         state.power.pf = activeCh > 0 || state.simFault === 'OVER_AMP' ? 0.98 : 0.0;
-        state.smoke = state.simFault === 'SMOKE' ? 76 : 6 + Math.floor(Math.random() * 4);
+        state.smoke = state.simFault === 'SMOKE' ? Math.min(95, state.config.maxSmoke + 15) : 6 + Math.floor(Math.random() * 4);
         state.lastSync = new Date();
         return;
       }
@@ -165,7 +196,7 @@
 
       if (state.isOnline) {
         const getRes = await fetchWithTimeout(
-          `${base}/get?token=${encodeURIComponent(state.config.token)}&V0&V1&V2&V3&V5&V6&V7&V8&V9&V15&V16`
+          `${base}/get?token=${encodeURIComponent(state.config.token)}&V0&V1&V2&V3&V5&V6&V7&V8&V9&V11&V12&V13`
         );
         if (getRes.ok) {
           const d = await getRes.json();
@@ -173,12 +204,18 @@
             if (!ch.pending && d[ch.pin] !== undefined) ch.state = Number(d[ch.pin]) === 1;
             if (d[ch.schedPin] !== undefined) ch.schedule = parseBlynkTimeInput(d[ch.schedPin]);
           });
-          if (d.V5 !== undefined) state.autoMode = Number(d.V5) === 1;
-          if (d.V15 !== undefined) {
-            const parsed = parsePzemCsv(d.V15);
+          if (d.V11 !== undefined) {
+            const parsed = parsePzemCsv(d.V11);
             if (parsed) state.power = parsed;
           }
-          if (d.V16 !== undefined) state.smoke = Number(d.V16) || 0;
+          if (d.V12 !== undefined) state.smoke = Number(d.V12) || 0;
+          if (d.V13 !== undefined && !Number.isNaN(Number(d.V13))) {
+            const cVal = parseInt(d.V13, 10); if (!Number.isNaN(cVal) && cVal !== 99) state.config.resetCycleDays = cVal;
+          }
+          if (d.V5 !== undefined) {
+            const limits = parseSafetyThresholds(d.V5);
+            if (limits) Object.assign(state.config, limits);
+          }
         }
       }
     } catch (_) {
@@ -212,7 +249,6 @@
     if (!ch || ch.pending || !state.isOnline) return;
     const prev = ch.state;
     const next = !prev;
-    state.autoMode = false;
     ch.state = next;
     ch.pending = true;
     if (SCB.render) SCB.render();
@@ -220,7 +256,7 @@
     try {
       if (state.config.mode === 'LIVE') {
         try {
-          await blynkBatch(`V14=Web%20Dashboard&${ch.pin}=${next ? 1 : 0}`);
+          await blynkBatch(`V10=Web%20Dashboard&${ch.pin}=${next ? 1 : 0}`);
         } catch (_) {
           await blynkUpdate(`${ch.pin}=${next ? 1 : 0}`);
         }
@@ -268,6 +304,7 @@
     blynkBatch,
     performEnergyReset,
     checkAutoEnergyReset,
+    syncSettingsToCloud,
     syncDevice,
     fetchCloudLogs,
     toggleChannel,
