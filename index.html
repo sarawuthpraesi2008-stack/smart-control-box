@@ -773,12 +773,9 @@
 
         <div class="auto-box">
           <div>
-            <div class="auto-title">โหมดไฟวิ่งอัตโนมัติ <span class="mono pin-tag">V5</span></div>
-            <div class="auto-sub">สลับ 1→2→3→4 (0.5s)</div>
+            <div class="auto-title">เกณฑ์ตัดไฟอัตโนมัติ <span class="mono pin-tag">V5</span></div>
+            <div class="auto-sub mono" id="lblMasterThresholds">245V · 10.0A · 60%</div>
           </div>
-          <button id="btnAutoMode" type="button" role="switch" aria-checked="false" class="switch-track">
-            <span id="autoModeThumb" class="switch-knob"></span>
-          </button>
         </div>
       </div>
 
@@ -805,7 +802,8 @@
       <div class="test-bar-title mono">TEST BENCH <span style="font-weight:500;color:var(--text-muted);">(SIMULATION)</span></div>
       <div class="test-btns">
         <button id="btnTestSeq" type="button" class="btn btn-sm">เทสรีเลย์ 1→4</button>
-        <button id="btnTestOverAmp" type="button" class="btn btn-sm btn-danger-soft">เทสกระแสเกิน (&gt;10A)</button>
+        <button id="btnTestOverVolt" type="button" class="btn btn-sm btn-danger-soft">เทสแรงดันเกิน</button>
+        <button id="btnTestOverAmp" type="button" class="btn btn-sm btn-danger-soft">เทสกระแสเกิน</button>
         <button id="btnTestSmoke" type="button" class="btn btn-sm btn-danger-soft">เทสควัน MQ-2</button>
         <button id="btnTestReset" type="button" class="btn btn-sm">รีเซ็ตปกติ</button>
       </div>
@@ -826,7 +824,7 @@
               <span class="ch-led"></span>
             </div>
             <div class="ch-main-row">
-              <h3 class="ch-name">ช่องที่ 1 (GPIO 26)</h3>
+              <h3 class="ch-name">ปลั๊กไฟตัวที่ 1 (GPIO 26)</h3>
               <button type="button" class="switch-track is-on"><span class="switch-knob"></span></button>
             </div>
           </div>
@@ -842,7 +840,7 @@
               <span class="ch-led"></span>
             </div>
             <div class="ch-main-row">
-              <h3 class="ch-name">ช่องที่ 2 (GPIO 27)</h3>
+              <h3 class="ch-name">ปลั๊กไฟตัวที่ 2 (GPIO 27)</h3>
               <button type="button" class="switch-track"><span class="switch-knob"></span></button>
             </div>
           </div>
@@ -858,7 +856,7 @@
               <span class="ch-led"></span>
             </div>
             <div class="ch-main-row">
-              <h3 class="ch-name">ช่องที่ 3 (GPIO 14)</h3>
+              <h3 class="ch-name">ปลั๊กไฟตัวที่ 3 (GPIO 14)</h3>
               <button type="button" class="switch-track"><span class="switch-knob"></span></button>
             </div>
           </div>
@@ -874,7 +872,7 @@
               <span class="ch-led"></span>
             </div>
             <div class="ch-main-row">
-              <h3 class="ch-name">ช่องที่ 4 (GPIO 13)</h3>
+              <h3 class="ch-name">ปลั๊กไฟตัวที่ 4 (GPIO 13)</h3>
               <button type="button" class="switch-track"><span class="switch-knob"></span></button>
             </div>
           </div>
@@ -892,9 +890,9 @@
         <div class="panel-head">
           <div>
             <h2 class="section-title">มิเตอร์วัดพลังงานไฟฟ้า (PZEM-004T)</h2>
-            <p class="section-sub">Open CT สายเมนรวม • ตัดไฟอัตโนมัติเมื่อเกิน 10.0A</p>
+            <p class="section-sub" id="lblPzemLimits">Open CT สายเมนรวม • ตัดไฟเมื่อ ≥ 245V หรือ ≥ 10.0A</p>
           </div>
-          <button id="btnClearEnergy" type="button" class="btn mono" style="min-height:32px;font-size:11px;">Clear Energy (V17)</button>
+          <button id="btnClearEnergy" type="button" class="btn mono" style="min-height:32px;font-size:11px;">Clear Energy (V13)</button>
         </div>
 
         <div class="pzem-grid">
@@ -945,7 +943,7 @@
           <div class="panel-head" style="margin-bottom:10px;">
             <div>
               <div style="font-size:12px;font-weight:700;color:var(--text);">ตรวจจับควันในตู้ (MQ-2)</div>
-              <div class="mono" style="font-size:10px;color:var(--text-muted);">GPIO 34 • V16</div>
+              <div class="mono" id="lblSmokeLimit" style="font-size:10px;color:var(--text-muted);">GPIO 34 • V12 • ตัดไฟ ≥ 60%</div>
             </div>
             <span id="smokeBadge" class="mono smoke-badge">ปกติ (SAFE)</span>
           </div>
@@ -1061,14 +1059,25 @@
           <input id="cfgToken" type="password" placeholder="Auth Token" class="input mono" />
         </div>
       </div>
-      <div class="grid-2">
-        <div class="field">
-          <label for="cfgRate">อัตราค่าไฟ (บาท/หน่วย)</label>
-          <input id="cfgRate" type="number" step="0.01" placeholder="4.50" class="input mono" />
-        </div>
-        <div class="field">
-          <label for="cfgMaxAmp">กระแสตัดไฟ (A)</label>
-          <input id="cfgMaxAmp" type="number" step="0.5" placeholder="10.0" class="input mono" />
+      <div class="field">
+        <label for="cfgRate">อัตราค่าไฟ (บาท/หน่วย)</label>
+        <input id="cfgRate" type="number" step="0.01" placeholder="4.50" class="input mono" />
+      </div>
+      <div class="field" style="padding:10px 12px;border-radius:10px;background:var(--surface-muted);border:1px solid var(--border);">
+        <label style="color:var(--cobalt);margin-bottom:8px;">เกณฑ์ตัดไฟอัตโนมัติ (V5 · บันทึก Flash + แจ้ง LINE)</label>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+          <div>
+            <label for="cfgMaxVolt" style="font-size:11px;">แรงดัน (230–260V)</label>
+            <input id="cfgMaxVolt" type="number" min="230" max="260" step="1" value="245" class="input mono" />
+          </div>
+          <div>
+            <label for="cfgMaxAmp" style="font-size:11px;">กระแส (1–10A)</label>
+            <input id="cfgMaxAmp" type="number" min="1" max="10" step="0.5" value="10.0" class="input mono" />
+          </div>
+          <div>
+            <label for="cfgMaxSmoke" style="font-size:11px;">ควัน (20–90%)</label>
+            <input id="cfgMaxSmoke" type="number" min="20" max="90" step="5" value="60" class="input mono" />
+          </div>
         </div>
       </div>
       <div class="field">
@@ -1076,7 +1085,7 @@
         <input id="cfgGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="input mono" />
       </div>
       <div class="field">
-        <label for="cfgResetCycle">รอบรีเซ็ตค่าไฟสะสมอัตโนมัติ (V17 + บันทึกประวัติ)</label>
+        <label for="cfgResetCycle">รอบรีเซ็ตค่าไฟสะสมอัตโนมัติ (V13 + บันทึกประวัติ)</label>
         <select id="cfgResetCycle" class="select" style="width:100%;">
           <option value="0">ปิด (รีเซ็ตเอง)</option>
           <option value="1">รีเซ็ตทุก 1 วัน (รายวัน)</option>
@@ -1099,7 +1108,7 @@
   <div id="confirmModal" class="modal-bg hidden">
     <div class="modal-card" style="max-width:340px;border-color:#f0b6b6;">
       <h3 style="margin:0 0 8px;font-size:15px;color:var(--err);">ยืนยันปิดไฟทุกช่อง?</h3>
-      <p style="margin:0;font-size:12px;color:var(--text-secondary);">ระบบจะตัดไฟรีเลย์ทั้ง 4 ช่องและหยุดโหมดไฟวิ่งทันที</p>
+      <p style="margin:0;font-size:12px;color:var(--text-secondary);">ระบบจะสั่งตัดไฟปลั๊กทั้ง 4 ตัวพร้อมกันทันที</p>
       <div class="modal-foot" style="justify-content:flex-end;">
         <button id="btnCancelConfirm" type="button" class="btn">ยกเลิก</button>
         <button id="btnConfirmAllOff" type="button" class="btn btn-danger">ยืนยันปิดทั้งหมด</button>
@@ -1134,8 +1143,8 @@
     </div>
   </div>
 
-  <script src="core.js?v=9"></script>
-  <script src="api.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="core.js?v=11"></script>
+  <script src="api.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
