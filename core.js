@@ -3,11 +3,17 @@
 const STORAGE_KEY = 'smart_control_box_pro_v1';
 const FETCH_TIMEOUT_MS = 5000;
 
+const SAFETY_LIMITS = {
+  volt: { min: 230, max: 260, def: 245 },
+  amp: { min: 1.0, max: 10.0, def: 10.0 },
+  smoke: { min: 20, max: 90, def: 60 },
+};
+
 const DEFAULT_CHANNELS = [
-  { id: 1, name: 'ช่องที่ 1 (GPIO 26)', pin: 'V0', schedPin: 'V6', state: false, pending: false, schedule: null },
-  { id: 2, name: 'ช่องที่ 2 (GPIO 27)', pin: 'V1', schedPin: 'V7', state: false, pending: false, schedule: null },
-  { id: 3, name: 'ช่องที่ 3 (GPIO 14)', pin: 'V2', schedPin: 'V8', state: false, pending: false, schedule: null },
-  { id: 4, name: 'ช่องที่ 4 (GPIO 13)', pin: 'V3', schedPin: 'V9', state: false, pending: false, schedule: null },
+  { id: 1, name: 'ปลั๊กไฟตัวที่ 1 (GPIO 26)', pin: 'V0', schedPin: 'V6', state: false, pending: false, schedule: null },
+  { id: 2, name: 'ปลั๊กไฟตัวที่ 2 (GPIO 27)', pin: 'V1', schedPin: 'V7', state: false, pending: false, schedule: null },
+  { id: 3, name: 'ปลั๊กไฟตัวที่ 3 (GPIO 14)', pin: 'V2', schedPin: 'V8', state: false, pending: false, schedule: null },
+  { id: 4, name: 'ปลั๊กไฟตัวที่ 4 (GPIO 13)', pin: 'V3', schedPin: 'V9', state: false, pending: false, schedule: null },
 ];
 
 function esc(s) {
@@ -18,6 +24,34 @@ function esc(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function clamp(val, min, max, fallback) {
+  const n = Number(val);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function clampSafetyThresholds(input = {}) {
+  const maxVolt = Math.round(clamp(input.maxVolt, SAFETY_LIMITS.volt.min, SAFETY_LIMITS.volt.max, SAFETY_LIMITS.volt.def));
+  const maxAmp = Number(clamp(input.maxAmp, SAFETY_LIMITS.amp.min, SAFETY_LIMITS.amp.max, SAFETY_LIMITS.amp.def).toFixed(1));
+  const maxSmoke = Math.round(clamp(input.maxSmoke, SAFETY_LIMITS.smoke.min, SAFETY_LIMITS.smoke.max, SAFETY_LIMITS.smoke.def));
+  return { maxVolt, maxAmp, maxSmoke };
+}
+
+// V5 CSV format: "245,10.0,60" -> { maxVolt, maxAmp, maxSmoke }
+function parseSafetyThresholds(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const parts = String(raw).split(',').map((x) => x.trim());
+  if (parts.length < 3 || parts.slice(0, 3).some((x) => x === '' || Number.isNaN(Number(x)))) {
+    return null;
+  }
+  return clampSafetyThresholds({ maxVolt: parts[0], maxAmp: parts[1], maxSmoke: parts[2] });
+}
+
+function formatSafetyThresholds(input) {
+  const t = clampSafetyThresholds(input);
+  return `${t.maxVolt},${t.maxAmp.toFixed(1)},${t.maxSmoke}`;
 }
 
 function hhmmToSec(hhmm) {
@@ -74,8 +108,12 @@ function getNextResetInfo(lastResetIso, cycleDays, nowDate = new Date()) {
 const coreApi = {
   STORAGE_KEY,
   FETCH_TIMEOUT_MS,
+  SAFETY_LIMITS,
   DEFAULT_CHANNELS,
   esc,
+  clampSafetyThresholds,
+  parseSafetyThresholds,
+  formatSafetyThresholds,
   hhmmToSec,
   secToHhmm,
   parseBlynkTimeInput,
