@@ -3,297 +3,1139 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SMART CONTROL BOX — ESP32 4-CH</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>SMART CONTROL BOX — Power &amp; Safety Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
   <style>
-    body {
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      background-color: #f3f6fb;
-      color: #0f172a;
+    :root {
+      /* Soft, eye-friendly cool-slate & pearl palette (นวลตา ไม่ขาวจ้า) */
+      --bg: #e4ebf3;
+      --surface: #f4f7fb;
+      --surface-raised: #f8fafd;
+      --surface-muted: #e8eff7;
+      --border: #ccd8e6;
+      --border-strong: #b4c5d8;
+      --text: #132035;
+      --text-secondary: #43566e;
+      --text-muted: #60748c;
+      --cobalt: #1348a8;
+      --cobalt-mid: #0e78b8;
+      --cyan: #15a8c4;
+      --grad-hero: linear-gradient(128deg, #103f9e 0%, #0d6eb8 54%, #14a6c2 100%);
+      --grad-card-on: linear-gradient(95deg, #1348a8 0%, #0e82c4 58%, #16aec9 100%);
+      --accent-soft: #e2eefb;
+      --accent-border: #9ec5ee;
+      --pzem-bg: #111c2e;
+      --pzem-border: #23334d;
+      --ok: #10b981;
+      --ok-soft: #e0f5ec;
+      --warn: #f59e0b;
+      --err: #dc2626;
+      --err-soft: #fae8e8;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow-card: 0 6px 18px -6px rgba(19, 44, 84, 0.10);
+      --shadow-float: 0 10px 26px -8px rgba(19, 44, 84, 0.14);
+      --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-    .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-    .hero-gradient {
-      background: linear-gradient(125deg, #0045e6 0%, #0077ff 52%, #06c8e8 100%);
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: var(--bg);
+      background-image: radial-gradient(rgba(19, 72, 168, 0.10) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
+
+    body { display: flex; flex-direction: column; }
+
+    button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: none; padding: 0; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--cobalt);
+      outline-offset: 2px;
+    }
+
+    .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+    .container { max-width: 1152px; width: 100%; margin: 0 auto; padding: 0 16px; }
+
+    /* HERO HEADER */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--grad-hero);
+      color: #f4f8ff;
+      padding-bottom: 68px;
+    }
+
     .pcb-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
       background-image:
         radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
       background-size: 24px 24px, 48px 48px, 48px 48px;
     }
-    .card-soft {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 8px 24px -10px rgba(15, 23, 42, 0.08);
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
     }
-    .card-soft:hover {
-      box-shadow: 0 14px 28px -10px rgba(0, 82, 217, 0.14);
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: rgba(15, 23, 42, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      display: grid;
+      place-items: center;
     }
-    .card-footer-on {
-      background: linear-gradient(90deg, #0052d9 0%, #00a8e8 100%);
+
+    .led-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #6ee7b7;
+      box-shadow: 0 0 10px #6ee7b7;
+      display: inline-block;
     }
-    .switch-track { transition: background-color .2s ease, border-color .2s ease; }
-    .switch-knob { transition: transform .22s cubic-bezier(.34,1.56,.64,1), background-color .2s ease; }
+
+    .led-dot.is-offline {
+      background: #fb7185;
+      box-shadow: 0 0 10px #fb7185;
+    }
+
+    .brand-title { font-weight: 700; letter-spacing: 0.02em; font-size: 15px; }
+    .brand-pro { font-weight: 500; opacity: 0.82; }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.20);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      font-size: 11px;
+    }
+
+    .mode-btn {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #fbbf24;
+      color: #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: filter 120ms ease, transform 80ms ease;
+    }
+    .mode-btn:hover { filter: brightness(1.06); }
+    .mode-btn:active { transform: scale(0.97); }
+    .mode-btn.is-live { background: #34d399; color: #052e16; }
+
+    .gear-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.20);
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      transition: background 120ms ease;
+    }
+    .gear-btn:hover { background: rgba(255, 255, 255, 0.22); }
+
+    .hero-body {
+      position: relative;
+      z-index: 2;
+      padding: 22px 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .hero-title { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.25; }
+    .hero-sub { margin: 6px 0 0; font-size: 13px; color: rgba(235, 245, 255, 0.90); }
+    .hero-chip { flex-shrink: 0; opacity: 0.92; }
+
+    .hero-wave {
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 100%;
+      height: 44px;
+      color: var(--bg);
+      display: block;
+    }
+
+    /* MAIN */
+    .main {
+      position: relative;
+      z-index: 5;
+      margin-top: -44px;
+      padding-bottom: 48px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-accent { border-top: 2px solid var(--cobalt-mid); }
+
+    /* FLOATING MASTER BAR */
+    .master-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-float);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .master-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .load-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-right: 20px;
+      border-right: 1px solid var(--border);
+    }
+    .load-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .load-val { font-size: 22px; font-weight: 700; color: var(--cobalt); line-height: 1.15; }
+    .load-val span.dim { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+    .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 28px; }
+    .mini-bar { width: 8px; border-radius: 3px; background: #cbd7e6; transition: background 150ms ease; }
+    .mini-bar.is-on { background: var(--cobalt); }
+
+    .auto-box { display: flex; align-items: center; gap: 12px; }
+    .auto-title { font-size: 12px; font-weight: 700; color: var(--text); }
+    .pin-tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: var(--accent-soft);
+      color: var(--cobalt);
+      font-weight: 700;
+      margin-left: 4px;
+    }
+    .auto-sub { font-size: 11px; color: var(--text-muted); }
+
+    /* SWITCH */
+    .switch-track {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 48px;
+      height: 28px;
+      padding: 3px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-muted);
+      transition: background 180ms ease, border-color 180ms ease;
+      flex-shrink: 0;
+    }
+    .switch-track.is-on {
+      background: var(--cobalt);
+      border-color: var(--cobalt);
+    }
+    .switch-track:disabled { opacity: 0.45; cursor: not-allowed; }
+    .switch-knob {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #8da1b8;
+      transform: translateX(0);
+      transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1), background 180ms ease;
+    }
+    .switch-track.is-on .switch-knob {
+      background: #f8fafc;
+      transform: translateX(20px);
+    }
+
+    /* BUTTONS */
+    .master-btns { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-raised);
+      color: var(--text);
+      transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--surface-muted); border-color: var(--cobalt-mid); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--grad-card-on);
+      border-color: transparent;
+      color: #f8fafc;
+      box-shadow: 0 3px 10px rgba(19, 72, 168, 0.22);
+    }
+    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-danger-soft {
+      background: var(--err-soft);
+      border-color: #f0b6b6;
+      color: #b91c1c;
+    }
+    .btn-danger-soft:hover { background: #f7d5d5; }
+    .btn-danger {
+      background: var(--err);
+      border-color: var(--err);
+      color: #fff;
+    }
+
+    /* SYSTEM TEST BAR (Visible in SIMULATION mode) */
+    .test-bar {
+      background: #e9eff7;
+      border: 1px dashed var(--accent-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .test-bar-title { font-size: 12px; font-weight: 700; color: var(--cobalt); display: flex; align-items: center; gap: 6px; }
+    .test-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .btn-sm { min-height: 32px; padding: 0 10px; font-size: 11px; }
+
+    /* ALERTS */
+    .alert-safety {
+      border-radius: 12px;
+      background: #dc2626;
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28);
+    }
+    .alert-offline {
+      border-radius: 12px;
+      background: var(--err-soft);
+      border: 1px solid #f0b6b6;
+      color: #991b1b;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    /* POWER & SAFETY GRID */
+    .power-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+      gap: 18px;
+    }
+
+    .panel-pad { padding: 18px 20px; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--cobalt);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 14px;
+      border-radius: 2px;
+      background: var(--grad-hero);
+      display: inline-block;
+    }
+    .section-sub { margin: 2px 0 0 12px; font-size: 11px; color: var(--text-muted); }
+
+    /* PZEM 6-CELL DIGITAL DISPLAY */
+    .pzem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .pzem-cell {
+      background: var(--pzem-bg);
+      border: 1px solid var(--pzem-border);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.42);
+      text-align: right;
+    }
+    .pzem-val { font-size: 22px; font-weight: 700; color: #38d9f5; line-height: 1.2; }
+    .pzem-val.is-energy { color: #34d399; }
+    .pzem-val.is-danger { color: #fb7185; }
+    .pzem-lbl { font-size: 11px; color: #94a3b8; text-align: left; margin-top: 6px; }
+
+    /* RIGHT STACK: COST + MQ-2 */
+    .side-stack { display: flex; flex-direction: column; gap: 16px; }
+    .cost-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(155deg, #f6f9fd 0%, #e7f0fb 100%);
+    }
+    .cost-num { font-size: 32px; font-weight: 700; color: var(--text); }
+    .rate-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      color: var(--cobalt);
+    }
+
+    .smoke-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--ok-soft);
+      color: #065f46;
+      border: 1px solid #9be4c6;
+    }
+    .smoke-badge.is-danger {
+      background: var(--err);
+      color: #fff;
+      border-color: var(--err);
+    }
+    .smoke-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: #d8e3ef;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .smoke-fill {
+      height: 100%;
+      background: var(--ok);
+      transition: width 250ms ease, background 200ms ease;
+    }
+
+    /* 4-CHANNEL SPLIT-TONE CARDS */
+    .ch-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .ch-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-card);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .ch-card.is-on {
+      border-color: var(--cobalt-mid);
+      box-shadow: 0 8px 20px -6px rgba(19, 72, 168, 0.22);
+    }
+    .ch-body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+    .ch-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .ch-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+    }
+    .ch-card.is-on .ch-badge { background: var(--accent-soft); color: var(--cobalt); }
+    .ch-pins { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
+    .ch-led { width: 10px; height: 10px; border-radius: 50%; background: #c5d3e3; }
+    .ch-card.is-on .ch-led { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
+
+    .ch-main-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .ch-name { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.35; }
+
+    .ch-foot {
+      padding: 11px 14px;
+      background: #e9f0f8;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      transition: background 180ms ease;
+    }
+    .ch-card.is-on .ch-foot {
+      background: var(--grad-card-on);
+      border-top-color: transparent;
+      color: #f8fafc;
+    }
+    .ch-sched-btn {
+      font-weight: 700;
+      text-decoration: underline;
+      color: var(--cobalt);
+      flex-shrink: 0;
+    }
+    .ch-card.is-on .ch-sched-btn { color: #ffffff; }
+
+    /* ACTIVITY LOG */
+    .log-head {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .log-controls { display: flex; align-items: center; gap: 8px; }
+    .select, .input {
+      height: 36px;
+      padding: 0 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-raised);
+      font-size: 12px;
+      color: var(--text);
+    }
+    .input { width: 100%; }
+
+    .table-wrap { overflow-x: auto; max-height: 300px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+      font-size: 10px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    tbody tr:hover { background: var(--accent-soft); }
+    .td-right { text-align: right; }
+
+    .src-badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .src-web { background: #e2eefb; color: #1348a8; border-color: #b4d1f2; }
+    .src-blynk { background: #dff3fa; color: #0369a1; border-color: #a4d9ee; }
+    .src-line { background: #e0f5ec; color: #047857; border-color: #9be4c6; }
+    .src-timer { background: #fbf1d9; color: #a16207; border-color: #efd593; }
+    .src-safety { background: #fae8e8; color: #b91c1c; border-color: #f0b6b6; }
+
+    /* MODALS */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(15, 23, 42, 0.52);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 430px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(10, 30, 70, 0.26);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-close { font-size: 22px; line-height: 1; color: var(--text-muted); padding: 2px 6px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+
+    .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+    .day-chip input { display: none; }
+    .day-chip span {
+      display: block;
+      padding: 7px 0;
+      border-radius: 8px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border-strong);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .day-chip input:checked + span {
+      background: var(--cobalt);
+      border-color: var(--cobalt);
+      color: #fff;
+    }
+
+    .modal-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* TOAST */
+    .toast-wrap {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      background: #132035;
+      box-shadow: var(--shadow-float);
+    }
+    .toast-item.is-success { background: var(--cobalt); }
+    .toast-item.is-error { background: var(--err); }
+
+    @media (max-width: 1024px) {
+      .power-grid { grid-template-columns: 1fr; }
+      .ch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .status-pill, .hero-chip { display: none; }
+      .hero-title { font-size: 21px; }
+      .pzem-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ch-grid { grid-template-columns: 1fr; }
+      .load-box { padding-right: 0; border-right: none; }
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+<body>
 
-  <!-- HERO HEADER (COBALT TO CYAN + PCB CIRCUIT) -->
-  <header class="hero-gradient relative overflow-hidden text-white pb-16 sm:pb-20">
-    <div class="pcb-grid absolute inset-0 pointer-events-none"></div>
+  <!-- HERO HEADER -->
+  <header class="hero">
+    <div class="pcb-grid"></div>
 
-    <!-- Top Navigation -->
-    <nav class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3 border-b border-white/15">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center">
-          <span id="headerLed" class="w-2.5 h-2.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#6ee7b7]"></span>
+    <div class="container">
+      <nav class="topbar">
+        <div class="brand">
+          <div class="brand-icon"><span id="headerLed" class="led-dot"></span></div>
+          <span class="brand-title">SMART CONTROL <span class="mono brand-pro">PRO</span></span>
         </div>
-        <span class="font-bold tracking-wide text-sm sm:text-base">SMART CONTROL <span class="mono font-normal opacity-80">BOX</span></span>
-      </div>
 
-      <div class="flex items-center gap-2">
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] mono">
-          <span id="deviceStatusText" class="font-bold tracking-wider">ONLINE</span>
-          <span class="opacity-50">•</span>
-          <span id="lastSyncTime" class="opacity-90">--:--:--</span>
+        <div class="top-actions">
+          <div class="status-pill mono">
+            <span id="deviceStatusText" style="font-weight:700;">ONLINE</span>
+            <span style="opacity:0.5;">•</span>
+            <span id="lastSyncTime">--:--:--</span>
+          </div>
+          <button id="btnToggleMode" type="button" class="mode-btn mono">SIMULATION</button>
+          <button id="btnOpenSettings" type="button" class="gear-btn" title="ตั้งค่า" aria-label="ตั้งค่า">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
         </div>
-        <button id="btnToggleMode" type="button" class="mono px-3 py-1.5 rounded-full text-[11px] font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition cursor-pointer shadow-sm">
-          SIMULATION
-        </button>
-        <button id="btnOpenSettings" type="button" class="p-2 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 text-white transition cursor-pointer" title="ตั้งค่าการเชื่อมต่อ">
-          <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </nav>
+
+      <div class="hero-body">
+        <div>
+          <div class="hero-badge mono">ESP32 • PZEM-004T • MQ-2 SAFETY</div>
+          <h1 class="hero-title">ควบคุมไฟฟ้าอัจฉริยะ &amp; วัดพลังงาน</h1>
+          <p class="hero-sub">ตัดไฟอัตโนมัติเมื่อกระแสเกิน 10A หรือตรวจพบควัน • คำนวณค่าไฟเรียลไทม์</p>
+        </div>
+        <div class="hero-chip" aria-hidden="true">
+          <svg width="124" height="96" viewBox="0 0 132 104" fill="none">
+            <rect x="28" y="16" width="76" height="72" rx="12" fill="white" fill-opacity="0.14" stroke="white" stroke-opacity="0.65" stroke-width="2"/>
+            <rect x="42" y="30" width="48" height="44" rx="6" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
+            <path d="M52 52H60L64 42L70 62L74 52H80" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 30H28M12 44H28M12 58H28M12 72H28M104 30H120M104 44H120M104 58H120M104 72H120" stroke="white" stroke-opacity="0.8" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="12" cy="30" r="3" fill="#6ee7b7"/><circle cx="120" cy="72" r="3" fill="#67e8f9"/>
           </svg>
-        </button>
-      </div>
-    </nav>
-
-    <!-- Hero Content -->
-    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-7 pb-4 flex items-center justify-between gap-6">
-      <div class="max-w-xl">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 mono text-[10px] tracking-widest uppercase mb-2.5">
-          ESP32 • 4-CH RELAY • V6–V9 TIMER
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight leading-snug">
-          ควบคุมระบบไฟฟ้าอัจฉริยะ 4 ช่อง
-        </h1>
-        <p class="text-xs sm:text-sm text-blue-100/90 mt-1.5">
-          ซิงก์สถานะเรียลไทม์ร่วมกับ Blynk App, LINE Bot และตารางตั้งเวลาอัตโนมัติ
-        </p>
-      </div>
-
-      <!-- Minimal Electronics MCU Graphic -->
-      <div class="hidden md:block shrink-0 opacity-90">
-        <svg width="132" height="104" viewBox="0 0 132 104" fill="none">
-          <rect x="28" y="16" width="76" height="72" rx="12" fill="white" fill-opacity="0.14" stroke="white" stroke-opacity="0.65" stroke-width="2"/>
-          <rect x="42" y="30" width="48" height="44" rx="6" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
-          <path d="M52 52H60L64 42L70 62L74 52H80" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- Pins Left & Right -->
-          <path d="M12 30H28M12 44H28M12 58H28M12 72H28" stroke="white" stroke-opacity="0.8" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M104 30H120M104 44H120M104 58H120M104 72H120" stroke="white" stroke-opacity="0.8" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="12" cy="30" r="3" fill="#6ee7b7"/>
-          <circle cx="120" cy="72" r="3" fill="#67e8f9"/>
-        </svg>
       </div>
     </div>
 
-    <!-- Bottom Wave Curve -->
-    <svg class="absolute bottom-0 left-0 w-full h-10 sm:h-12 text-[#f3f6fb]" viewBox="0 0 1440 80" preserveAspectRatio="none">
+    <svg class="hero-wave" viewBox="0 0 1440 80" preserveAspectRatio="none">
       <path fill="currentColor" d="M0,32 C320,88 760,-10 1440,48 L1440,80 L0,80 Z"></path>
     </svg>
   </header>
 
-  <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 -mt-12 relative z-20 space-y-6 pb-12 flex-grow">
+  <main class="container main">
 
     <!-- FLOATING MASTER COMMAND BAR -->
-    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-lg shadow-blue-900/5 p-4 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <div class="flex flex-wrap items-center gap-5">
-        <!-- Active Load -->
-        <div class="flex items-center gap-3 pr-5 border-r border-slate-200">
+    <section class="master-bar">
+      <div class="master-left">
+        <div class="load-box">
           <div>
-            <div class="text-[11px] font-medium text-slate-500">โหลดที่ทำงานอยู่</div>
-            <div class="mono text-2xl font-bold text-blue-600 leading-tight">
-              <span id="activeCount">0</span><span class="text-slate-400 text-sm"> / 4 CH</span>
-            </div>
+            <div class="load-label">โหลดที่ทำงานอยู่</div>
+            <div class="mono load-val"><span id="activeCount">0</span><span class="dim"> / 4 CH</span></div>
           </div>
-          <div id="miniLoadBars" class="flex items-end gap-1 h-7"></div>
+          <div id="miniLoadBars" class="mini-bars">
+            <div class="mini-bar" style="height:10px;"></div>
+            <div class="mini-bar" style="height:16px;"></div>
+            <div class="mini-bar" style="height:22px;"></div>
+            <div class="mini-bar" style="height:28px;"></div>
+          </div>
         </div>
 
-        <!-- Auto Running Light V5 -->
-        <div class="flex items-center gap-3">
+        <div class="auto-box">
           <div>
-            <div class="text-xs font-bold text-slate-800">โหมดไฟวิ่งอัตโนมัติ <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">V5</span></div>
-            <div class="text-[11px] text-slate-400">สลับ 1→2→3→4 (0.5s)</div>
+            <div class="auto-title">โหมดไฟวิ่งอัตโนมัติ <span class="mono pin-tag">V5</span></div>
+            <div class="auto-sub">สลับ 1→2→3→4 (0.5s)</div>
           </div>
-          <button id="btnAutoMode" type="button" role="switch" aria-checked="false"
-            class="switch-track relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-slate-300 bg-slate-100 p-1 cursor-pointer">
-            <span id="autoModeThumb" class="switch-knob inline-block h-4 w-4 rounded-full bg-slate-400 translate-x-0"></span>
+          <button id="btnAutoMode" type="button" role="switch" aria-checked="false" class="switch-track">
+            <span id="autoModeThumb" class="switch-knob"></span>
           </button>
         </div>
       </div>
 
-      <!-- Master Actions -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button id="btnManualSync" type="button" class="mono text-xs px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition cursor-pointer">
-          ↻ SYNC
-        </button>
-        <button id="btnAllOn" type="button" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold tracking-wide shadow-sm transition cursor-pointer">
-          เปิดทั้งหมด
-        </button>
-        <button id="btnAllOffPrompt" type="button" class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-bold tracking-wide transition cursor-pointer">
-          ปิดทั้งหมด
-        </button>
+      <div class="master-btns">
+        <button id="btnManualSync" type="button" class="btn mono">↻ SYNC</button>
+        <button id="btnAllOn" type="button" class="btn btn-primary">เปิดทั้งหมด</button>
+        <button id="btnAllOffPrompt" type="button" class="btn btn-danger-soft">ปิดทั้งหมด</button>
       </div>
     </section>
 
-    <!-- OFFLINE ALERT -->
-    <div id="offlineAlert" class="hidden rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 flex items-center justify-between gap-3">
-      <div class="text-xs text-rose-700">
-        <span class="font-bold">บอร์ดออฟไลน์ (OFFLINE):</span>
-        <span id="offlineAlertDetail">ไม่สามารถเชื่อมต่อบอร์ดได้ชั่วคราว สามารถกดสวิตช์หน้าตู้ได้ตามปกติ</span>
-      </div>
-      <button id="btnRetrySync" type="button" class="mono text-[11px] px-3 py-1 rounded-lg bg-rose-600 text-white font-semibold cursor-pointer shrink-0">RETRY</button>
+    <!-- EMERGENCY & OFFLINE BANNERS -->
+    <div id="safetyAlert" class="alert-safety hidden">
+      <div style="font-size:13px;font-weight:700;" id="safetyAlertText">🚨 แจ้งเตือนความปลอดภัย: ตรวจพบความผิดปกติ!</div>
+      <span class="mono" style="font-size:10px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,0.22);font-weight:700;">AUTO CUTOFF</span>
     </div>
 
-    <!-- 4-CHANNEL SPLIT-TONE CARDS -->
-    <section class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-bold text-blue-700">แผงควบคุมรีเลย์ 4 ช่อง</h2>
-        <span class="mono text-[11px] text-slate-400">RELAY V0–V3 • TIMER V6–V9</span>
+    <div id="offlineAlert" class="alert-offline hidden">
+      <div><strong>บอร์ดออฟไลน์ (OFFLINE):</strong> <span id="offlineAlertDetail">ไม่สามารถเชื่อมต่อบอร์ดได้ชั่วคราว</span></div>
+      <button id="btnRetrySync" type="button" class="btn btn-danger mono" style="min-height:30px;padding:0 12px;">RETRY</button>
+    </div>
+
+    <!-- SYSTEM TEST BAR (SIMULATION ONLY) -->
+    <section id="simTestBar" class="test-bar">
+      <div class="test-bar-title mono">TEST BENCH <span style="font-weight:500;color:var(--text-muted);">(SIMULATION)</span></div>
+      <div class="test-btns">
+        <button id="btnTestSeq" type="button" class="btn btn-sm">เทสรีเลย์ 1→4</button>
+        <button id="btnTestOverAmp" type="button" class="btn btn-sm btn-danger-soft">เทสกระแสเกิน (&gt;10A)</button>
+        <button id="btnTestSmoke" type="button" class="btn btn-sm btn-danger-soft">เทสควัน MQ-2</button>
+        <button id="btnTestReset" type="button" class="btn btn-sm">รีเซ็ตปกติ</button>
       </div>
-      <div id="channelGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    </section>
+
+    <!-- 4-CHANNEL SPLIT-TONE CARDS -->
+    <section>
+      <div class="panel-head" style="margin-bottom:10px;">
+        <h2 class="section-title">แผงควบคุมรีเลย์ 4 ช่อง</h2>
+        <span class="mono" style="font-size:11px;color:var(--text-muted);">RELAY V0–V3 • TIMER V6–V9</span>
+      </div>
+      <div id="channelGrid" class="ch-grid">
+        <!-- Initial SSR preview cards (hydrated live by app.js?v=5) -->
+        <div class="ch-card is-on">
+          <div class="ch-body">
+            <div class="ch-top">
+              <div><span class="ch-badge mono">CH 01</span><span class="ch-pins mono">V0/V6</span></div>
+              <span class="ch-led"></span>
+            </div>
+            <div class="ch-main-row">
+              <h3 class="ch-name">ช่องที่ 1 (GPIO 26)</h3>
+              <button type="button" class="switch-track is-on"><span class="switch-knob"></span></button>
+            </div>
+          </div>
+          <div class="ch-foot">
+            <span class="mono">⏰ 08:00–17:30 (ทุกวัน)</span>
+            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
+          </div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-body">
+            <div class="ch-top">
+              <div><span class="ch-badge mono">CH 02</span><span class="ch-pins mono">V1/V7</span></div>
+              <span class="ch-led"></span>
+            </div>
+            <div class="ch-main-row">
+              <h3 class="ch-name">ช่องที่ 2 (GPIO 27)</h3>
+              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
+            </div>
+          </div>
+          <div class="ch-foot">
+            <span>ไม่ได้ตั้งเวลา</span>
+            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
+          </div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-body">
+            <div class="ch-top">
+              <div><span class="ch-badge mono">CH 03</span><span class="ch-pins mono">V2/V8</span></div>
+              <span class="ch-led"></span>
+            </div>
+            <div class="ch-main-row">
+              <h3 class="ch-name">ช่องที่ 3 (GPIO 14)</h3>
+              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
+            </div>
+          </div>
+          <div class="ch-foot">
+            <span>ไม่ได้ตั้งเวลา</span>
+            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
+          </div>
+        </div>
+        <div class="ch-card">
+          <div class="ch-body">
+            <div class="ch-top">
+              <div><span class="ch-badge mono">CH 04</span><span class="ch-pins mono">V3/V9</span></div>
+              <span class="ch-led"></span>
+            </div>
+            <div class="ch-main-row">
+              <h3 class="ch-name">ช่องที่ 4 (GPIO 13)</h3>
+              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
+            </div>
+          </div>
+          <div class="ch-foot">
+            <span>ไม่ได้ตั้งเวลา</span>
+            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POWER MONITOR (PZEM-004T) & SMOKE SAFETY (MQ-2) -->
+    <section class="power-grid">
+      <div class="card card-accent panel-pad">
+        <div class="panel-head">
+          <div>
+            <h2 class="section-title">มิเตอร์วัดพลังงานไฟฟ้า (PZEM-004T)</h2>
+            <p class="section-sub">Open CT สายเมนรวม • ตัดไฟอัตโนมัติเมื่อเกิน 10.0A</p>
+          </div>
+          <button id="btnClearEnergy" type="button" class="btn mono" style="min-height:32px;font-size:11px;">Clear Energy (V17)</button>
+        </div>
+
+        <div class="pzem-grid">
+          <div class="pzem-cell">
+            <div class="mono pzem-val" id="valVoltage">220.4V</div>
+            <div class="pzem-lbl">Voltage (แรงดัน)</div>
+          </div>
+          <div class="pzem-cell" id="boxCurrent">
+            <div class="mono pzem-val" id="valCurrent">0.000A</div>
+            <div class="pzem-lbl">Current (กระแส)</div>
+          </div>
+          <div class="pzem-cell">
+            <div class="mono pzem-val" id="valPower">0W</div>
+            <div class="pzem-lbl">Power (กำลังไฟ)</div>
+          </div>
+          <div class="pzem-cell">
+            <div class="mono pzem-val is-energy" id="valEnergy">1.245kWh</div>
+            <div class="pzem-lbl">Energy (หน่วยสะสม)</div>
+          </div>
+          <div class="pzem-cell">
+            <div class="mono pzem-val" id="valFreq">50.0Hz</div>
+            <div class="pzem-lbl">Frequency (ความถี่)</div>
+          </div>
+          <div class="pzem-cell">
+            <div class="mono pzem-val" id="valPf">0.98</div>
+            <div class="pzem-lbl">Power Factor</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-stack">
+        <div class="card card-accent panel-pad cost-card">
+          <div class="panel-head" style="margin-bottom:8px;">
+            <span style="font-size:12px;font-weight:700;color:var(--cobalt);">ประมาณการค่าไฟสะสม</span>
+            <span class="mono rate-pill" id="lblRate">4.50 ฿/หน่วย</span>
+          </div>
+          <div style="margin:6px 0;">
+            <span class="mono cost-num" id="valCost">5.60</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text-muted);margin-left:4px;">บาท</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            <span id="lblResetCycle" class="mono" style="font-size:11px;color:var(--text-secondary);">รอบรีเซ็ต: รีเซ็ตเอง</span>
+            <button id="btnOpenBilling" type="button" class="ch-sched-btn" style="font-size:11px;">ประวัติบิล</button>
+          </div>
+        </div>
+
+        <div class="card panel-pad" id="smokeCard">
+          <div class="panel-head" style="margin-bottom:10px;">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">ตรวจจับควันในตู้ (MQ-2)</div>
+              <div class="mono" style="font-size:10px;color:var(--text-muted);">GPIO 34 • V16</div>
+            </div>
+            <span id="smokeBadge" class="mono smoke-badge">ปกติ (SAFE)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--text-secondary);">ระดับความเข้มข้นควัน</span>
+            <span class="mono" style="font-weight:700;" id="valSmoke">8%</span>
+          </div>
+          <div class="smoke-track">
+            <div id="smokeBar" class="smoke-fill" style="width: 8%;"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ACTIVITY LOG PANEL -->
-    <section class="card-soft rounded-2xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <h2 class="text-sm font-bold text-blue-700">ประวัติการสั่งงาน (Activity Log)</h2>
-          <span id="sheetSyncStatus" class="mono text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">LOCAL</span>
+    <section class="card card-accent" style="overflow:hidden;">
+      <div class="log-head">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h2 class="section-title">ประวัติการสั่งงาน (Activity Log)</h2>
+          <span id="sheetSyncStatus" class="mono rate-pill">LOCAL</span>
         </div>
-        <div class="flex items-center gap-2">
-          <select id="logFilter" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500">
+        <div class="log-controls">
+          <select id="logFilter" class="select">
             <option value="ALL">ทุกแหล่งที่มา</option>
             <option value="Web Dashboard">Web Dashboard</option>
             <option value="Blynk App">Blynk App</option>
             <option value="LINE Bot">LINE Bot</option>
             <option value="Timer">Timer</option>
+            <option value="Safety">Safety Cutoff</option>
           </select>
-          <button id="btnFetchCloudLogs" type="button" class="mono text-[11px] px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold transition cursor-pointer">
-            ↻ ดึง LOG
-          </button>
+          <button id="btnFetchCloudLogs" type="button" class="btn mono" style="min-height:36px;">↻ ดึง LOG</button>
         </div>
       </div>
 
-      <div class="overflow-x-auto max-h-72">
-        <table class="w-full text-left border-collapse">
-          <thead class="bg-slate-50/90 text-slate-500 mono text-[10px] uppercase sticky top-0">
+      <div class="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <th class="py-2.5 px-5 border-b border-slate-100">TIME</th>
-              <th class="py-2.5 px-4 border-b border-slate-100">CHANNEL</th>
-              <th class="py-2.5 px-4 border-b border-slate-100">ACTION</th>
-              <th class="py-2.5 px-5 border-b border-slate-100 text-right">SOURCE</th>
+              <th>TIME</th>
+              <th>CHANNEL</th>
+              <th>ACTION</th>
+              <th class="td-right">SOURCE</th>
             </tr>
           </thead>
-          <tbody id="logTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+          <tbody id="logTableBody">
+            <tr>
+              <td class="mono" style="color:var(--text-muted);">--:--:--</td>
+              <td style="font-weight:600;">CH1 • ช่องที่ 1</td>
+              <td>รอโหลดข้อมูลจาก app.js</td>
+              <td class="td-right"><span class="src-badge src-web mono">Web Dashboard</span></td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <div id="toastContainer" class="toast-wrap"></div>
 
   <!-- SCHEDULE MODAL -->
-  <div id="scheduleModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 id="schedModalTitle" class="text-sm font-bold text-blue-700">ตั้งเวลาเปิด-ปิด</h3>
-        <button id="btnCloseSchedX" type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none cursor-pointer">×</button>
+  <div id="scheduleModal" class="modal-bg hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="schedModalTitle" class="section-title">ตั้งเวลาเปิด-ปิด</h3>
+        <button id="btnCloseSchedX" type="button" class="modal-close" aria-label="ปิด">×</button>
       </div>
-      <div class="space-y-4 text-xs">
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-blue-700 font-semibold mb-1">เวลาเปิด (ON)</label>
-            <input id="schedStart" type="time" class="mono w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-rose-600 font-semibold mb-1">เวลาปิด (OFF)</label>
-            <input id="schedStop" type="time" class="mono w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:border-rose-500 focus:outline-none" />
-          </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="schedStart" style="color:var(--cobalt);">เวลาเปิด (ON)</label>
+          <input id="schedStart" type="time" class="input mono" />
         </div>
-        <div>
-          <label class="block text-slate-500 font-medium mb-2">วันทำงาน</label>
-          <div class="grid grid-cols-7 gap-1.5 text-center" id="weekdaySelector">
-            <label class="cursor-pointer"><input type="checkbox" value="1" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">จ</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="2" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">อ</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="3" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">พ</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="4" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">พฤ</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="5" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">ศ</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="6" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">ส</span></label>
-            <label class="cursor-pointer"><input type="checkbox" value="7" checked class="hidden peer"><span class="block py-1.5 rounded-lg bg-slate-50 border border-slate-200 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-checked:text-white font-bold">อา</span></label>
-          </div>
+        <div class="field">
+          <label for="schedStop" style="color:var(--err);">เวลาปิด (OFF)</label>
+          <input id="schedStop" type="time" class="input mono" />
         </div>
       </div>
-      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-        <button id="btnClearSchedule" type="button" class="text-xs text-rose-600 hover:underline font-medium cursor-pointer">ยกเลิกเวลา</button>
-        <div class="flex gap-2">
-          <button id="btnCancelSched" type="button" class="px-3.5 py-2 rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 cursor-pointer">ปิด</button>
-          <button id="btnSaveSchedule" type="button" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white cursor-pointer">บันทึกเวลา</button>
+      <div class="field">
+        <label>วันทำงาน</label>
+        <div class="days-grid" id="weekdaySelector">
+          <label class="day-chip"><input type="checkbox" value="1" checked><span>จ</span></label>
+          <label class="day-chip"><input type="checkbox" value="2" checked><span>อ</span></label>
+          <label class="day-chip"><input type="checkbox" value="3" checked><span>พ</span></label>
+          <label class="day-chip"><input type="checkbox" value="4" checked><span>พฤ</span></label>
+          <label class="day-chip"><input type="checkbox" value="5" checked><span>ศ</span></label>
+          <label class="day-chip"><input type="checkbox" value="6" checked><span>ส</span></label>
+          <label class="day-chip"><input type="checkbox" value="7" checked><span>อา</span></label>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="btnClearSchedule" type="button" style="font-size:12px;color:var(--err);font-weight:600;">ยกเลิกเวลา</button>
+        <div style="display:flex;gap:8px;">
+          <button id="btnCancelSched" type="button" class="btn">ปิด</button>
+          <button id="btnSaveSchedule" type="button" class="btn btn-primary">บันทึกเวลา</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- SETTINGS MODAL -->
-  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-sm font-bold text-blue-700">ตั้งค่าการเชื่อมต่อ API</h3>
-        <button id="btnCloseSettingsX" type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none cursor-pointer">×</button>
+  <div id="settingsModal" class="modal-bg hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 class="section-title">ตั้งค่าการเชื่อมต่อ &amp; ค่าไฟ</h3>
+        <button id="btnCloseSettingsX" type="button" class="modal-close" aria-label="ปิด">×</button>
       </div>
-      <div class="space-y-3 text-xs">
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Blynk Server</label>
-            <input id="cfgServer" type="text" placeholder="blynk.cloud" class="mono w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-slate-500 font-medium mb-1">Blynk Auth Token</label>
-            <input id="cfgToken" type="password" placeholder="Auth Token" class="mono w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none" />
-          </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="cfgServer">Blynk Server</label>
+          <input id="cfgServer" type="text" placeholder="blynk.cloud" class="input mono" />
         </div>
-        <div>
-          <label class="block text-slate-500 font-medium mb-1">Google Apps Script URL</label>
-          <input id="cfgGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="mono w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none" />
-        </div>
-        <div class="pt-2 border-t border-slate-100">
-          <label class="block text-slate-500 font-medium mb-2">ชื่ออุปกรณ์ทั้ง 4 ช่อง</label>
-          <div id="channelConfigInputs" class="space-y-2"></div>
+        <div class="field">
+          <label for="cfgToken">Blynk Auth Token</label>
+          <input id="cfgToken" type="password" placeholder="Auth Token" class="input mono" />
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-        <button id="btnCancelSettings" type="button" class="px-3.5 py-2 rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 cursor-pointer">ยกเลิก</button>
-        <button id="btnSaveSettings" type="button" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white cursor-pointer">บันทึก</button>
+      <div class="grid-2">
+        <div class="field">
+          <label for="cfgRate">อัตราค่าไฟ (บาท/หน่วย)</label>
+          <input id="cfgRate" type="number" step="0.01" placeholder="4.50" class="input mono" />
+        </div>
+        <div class="field">
+          <label for="cfgMaxAmp">กระแสตัดไฟ (A)</label>
+          <input id="cfgMaxAmp" type="number" step="0.5" placeholder="10.0" class="input mono" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="cfgGasUrl">Google Apps Script URL</label>
+        <input id="cfgGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="input mono" />
+      </div>
+      <div class="field">
+        <label for="cfgResetCycle">รอบรีเซ็ตค่าไฟสะสมอัตโนมัติ (V17 + บันทึกประวัติ)</label>
+        <select id="cfgResetCycle" class="select" style="width:100%;">
+          <option value="0">ปิด (รีเซ็ตเอง)</option>
+          <option value="1">รีเซ็ตทุก 1 วัน (รายวัน)</option>
+          <option value="7">รีเซ็ตทุก 7 วัน (รายสัปดาห์)</option>
+          <option value="30">รีเซ็ตทุก 30 วัน (รายเดือน)</option>
+        </select>
+      </div>
+      <div class="field" style="padding-top:10px;border-top:1px solid var(--border);">
+        <label>ชื่ออุปกรณ์ทั้ง 4 ช่อง</label>
+        <div id="channelConfigInputs" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div class="modal-foot" style="justify-content:flex-end;">
+        <button id="btnCancelSettings" type="button" class="btn">ยกเลิก</button>
+        <button id="btnSaveSettings" type="button" class="btn btn-primary">บันทึก</button>
       </div>
     </div>
   </div>
 
   <!-- CONFIRM ALL OFF MODAL -->
-  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-xs w-full p-5 space-y-4 shadow-2xl border border-rose-200">
-      <h3 class="text-sm font-bold text-rose-600">ยืนยันปิดไฟทุกช่อง?</h3>
-      <p class="text-xs text-slate-500">ระบบจะตัดไฟรีเลย์ทั้ง 4 ช่องและหยุดโหมดไฟวิ่งทันที</p>
-      <div class="flex justify-end gap-2">
-        <button id="btnCancelConfirm" type="button" class="px-3.5 py-2 rounded-xl bg-slate-100 text-xs font-semibold text-slate-600 cursor-pointer">ยกเลิก</button>
-        <button id="btnConfirmAllOff" type="button" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white cursor-pointer">ยืนยันปิดทั้งหมด</button>
+  <div id="confirmModal" class="modal-bg hidden">
+    <div class="modal-card" style="max-width:340px;border-color:#f0b6b6;">
+      <h3 style="margin:0 0 8px;font-size:15px;color:var(--err);">ยืนยันปิดไฟทุกช่อง?</h3>
+      <p style="margin:0;font-size:12px;color:var(--text-secondary);">ระบบจะตัดไฟรีเลย์ทั้ง 4 ช่องและหยุดโหมดไฟวิ่งทันที</p>
+      <div class="modal-foot" style="justify-content:flex-end;">
+        <button id="btnCancelConfirm" type="button" class="btn">ยกเลิก</button>
+        <button id="btnConfirmAllOff" type="button" class="btn btn-danger">ยืนยันปิดทั้งหมด</button>
       </div>
     </div>
   </div>
 
- <script src="app.js?v=4"></script>
+  <!-- BILLING HISTORY MODAL -->
+  <div id="billingModal" class="modal-bg hidden">
+    <div class="modal-card" style="max-width:520px;">
+      <div class="modal-head">
+        <h3 class="section-title">ประวัติบันทึกค่าไฟสะสม</h3>
+        <button id="btnCloseBillingX" type="button" class="modal-close" aria-label="ปิด">×</button>
+      </div>
+      <div class="table-wrap" style="max-height:280px;">
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่บันทึก</th>
+              <th>รอบ</th>
+              <th class="td-right">หน่วย (kWh)</th>
+              <th class="td-right">ค่าไฟ (฿)</th>
+            </tr>
+          </thead>
+          <tbody id="billingTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-foot">
+        <button id="btnClearBilling" type="button" style="font-size:12px;color:var(--err);font-weight:600;">ล้างประวัติในเครื่อง</button>
+        <button id="btnCloseBilling" type="button" class="btn">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="core.js?v=9"></script>
+  <script src="api.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
