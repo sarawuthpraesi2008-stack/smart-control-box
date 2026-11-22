@@ -2,8 +2,9 @@
 
 (function initUI(SCB) {
   const {
-    state, esc, getNextResetInfo, saveConfig, saveBilling, pushLog,
-    blynkBatch, performEnergyReset, syncDevice, fetchCloudLogs, toggleChannel, saveSchedule,
+    state, esc, clampSafetyThresholds, getNextResetInfo, saveConfig, saveBilling,
+    pushLog, blynkBatch, performEnergyReset, syncSettingsToCloud,
+    syncDevice, fetchCloudLogs, toggleChannel, saveSchedule,
   } = SCB;
 
   const $ = (id) => document.getElementById(id);
@@ -29,12 +30,18 @@
 
   function renderPowerAndSafety() {
     const { v, c, p, e, f, pf } = state.power;
-    const maxAmp = Number(state.config.maxAmp) || 10.0;
+    const { maxVolt, maxAmp, maxSmoke } = clampSafetyThresholds(state.config);
     const rate = Number(state.config.rate) || 4.5;
+    const isOverVolt = v >= maxVolt;
     const isOverAmp = c >= maxAmp;
-    const isSmokeDanger = state.smoke >= 60;
+    const isSmokeDanger = state.smoke >= maxSmoke;
+
+    $('lblMasterThresholds').textContent = `${maxVolt}V · ${maxAmp.toFixed(1)}A · ${maxSmoke}%`;
+    $('lblPzemLimits').textContent = `Open CT สายเมนรวม • ตัดไฟเมื่อ ≥ ${maxVolt}V หรือ ≥ ${maxAmp.toFixed(1)}A`;
+    $('lblSmokeLimit').textContent = `GPIO 34 • V12 • ตัดไฟ ≥ ${maxSmoke}%`;
 
     $('valVoltage').textContent = `${v.toFixed(1)}V`;
+    $('valVoltage').className = `mono pzem-val ${isOverVolt ? 'is-danger' : ''}`;
     $('valCurrent').textContent = `${c.toFixed(3)}A`;
     $('valCurrent').className = `mono pzem-val ${isOverAmp ? 'is-danger' : ''}`;
     $('valPower').textContent = `${Math.round(p)}W`;
@@ -52,18 +59,20 @@
     $('valSmoke').textContent = `${state.smoke}%`;
     const bar = $('smokeBar');
     bar.style.width = `${Math.min(100, state.smoke)}%`;
-    bar.style.background = isSmokeDanger ? '#dc2626' : state.smoke >= 35 ? '#f59e0b' : '#10b981';
+    bar.style.background = isSmokeDanger ? '#dc2626' : state.smoke >= Math.round(maxSmoke * 0.6) ? '#f59e0b' : '#10b981';
 
     const badge = $('smokeBadge');
     badge.textContent = isSmokeDanger ? 'อันตราย! พบควัน' : 'ปกติ (SAFE)';
     badge.className = `mono smoke-badge ${isSmokeDanger ? 'is-danger' : ''}`;
 
     const alertEl = $('safetyAlert');
-    if (isSmokeDanger || isOverAmp) {
+    if (isSmokeDanger || isOverAmp || isOverVolt) {
       alertEl.classList.remove('hidden');
       $('safetyAlertText').textContent = isSmokeDanger
-        ? `🚨 ตรวจพบควันในตู้ (${state.smoke}%) — ระบบสั่งตัดไฟอัตโนมัติ!`
-        : `⚡ ตรวจพบกระแสเกินพิกัด (${c.toFixed(2)}A / ${maxAmp}A) — ระบบสั่งตัดไฟอัตโนมัติ!`;
+        ? `🚨 ตรวจพบควันในตู้ (${state.smoke}% / ${maxSmoke}%) — ระบบสั่งตัดไฟอัตโนมัติ!`
+        : isOverVolt
+          ? `⚡ ตรวจพบแรงดันเกินพิกัด (${v.toFixed(1)}V / ${maxVolt}V) — ระบบสั่งตัดไฟอัตโนมัติ!`
+          : `⚡ ตรวจพบกระแสเกินพิกัด (${c.toFixed(2)}A / ${maxAmp.toFixed(1)}A) — ระบบสั่งตัดไฟอัตโนมัติ!`;
     } else {
       alertEl.classList.add('hidden');
     }
@@ -159,10 +168,6 @@
       .map((c, i) => `<div class="mini-bar ${c.state ? 'is-on' : ''}" style="height:${heights[i]}px;"></div>`)
       .join('');
 
-    const autoBtn = $('btnAutoMode');
-    autoBtn.setAttribute('aria-checked', state.autoMode);
-    autoBtn.classList.toggle('is-on', state.autoMode);
-
     renderPowerAndSafety();
     renderChannels();
     renderLogs();
@@ -192,23 +197,10 @@
       } catch (e) { toast(e.message, 'error'); }
     };
 
-    $('btnAutoMode').onclick = async () => {
-      if (!state.isOnline) return;
-      const next = !state.autoMode;
-      try {
-        if (state.config.mode === 'LIVE') await blynkBatch(`V14=Web%20Dashboard&V5=${next ? 1 : 0}`);
-        state.autoMode = next;
-        if (!next) state.config.channels.forEach((c) => { c.state = false; });
-        pushLog('AUTO MODE (V5)', next ? 'เปิดโหมดไฟวิ่ง' : 'ปิดโหมดไฟวิ่ง');
-        render();
-      } catch (e) { toast(e.message, 'error'); }
-    };
-
     $('btnAllOn').onclick = async () => {
       if (!state.isOnline) return;
       try {
-        if (state.config.mode === 'LIVE') await blynkBatch('V14=Web%20Dashboard&V4=1');
-        state.autoMode = false;
+        if (state.config.mode === 'LIVE') await blynkBatch('V10=Web%20Dashboard&V4=1');
         state.config.channels.forEach((c) => { c.state = true; });
         pushLog('MASTER (V4)', 'เปิดทั้งหมด (ALL ON)');
         render();
@@ -221,8 +213,7 @@
       $('confirmModal').classList.add('hidden');
       if (!state.isOnline) return;
       try {
-        if (state.config.mode === 'LIVE') await blynkBatch('V14=Web%20Dashboard&V4=0');
-        state.autoMode = false;
+        if (state.config.mode === 'LIVE') await blynkBatch('V10=Web%20Dashboard&V4=0');
         state.config.channels.forEach((c) => { c.state = false; });
         pushLog('MASTER (V4)', 'ปิดทั้งหมด (ALL OFF)');
         render();
@@ -263,7 +254,9 @@
       $('cfgServer').value = state.config.server;
       $('cfgToken').value = state.config.token;
       $('cfgRate').value = state.config.rate;
+      $('cfgMaxVolt').value = state.config.maxVolt;
       $('cfgMaxAmp').value = state.config.maxAmp;
+      $('cfgMaxSmoke').value = state.config.maxSmoke;
       $('cfgGasUrl').value = state.config.gasUrl || '';
       $('cfgResetCycle').value = String(state.config.resetCycleDays || 0);
       $('channelConfigInputs').innerHTML = state.config.channels.map((ch) => `
@@ -276,12 +269,23 @@
     };
     $('btnCloseSettingsX').onclick = () => $('settingsModal').classList.add('hidden');
     $('btnCancelSettings').onclick = () => $('settingsModal').classList.add('hidden');
-    $('btnSaveSettings').onclick = () => {
+    $('btnSaveSettings').onclick = async () => {
+      const prevV = state.config.maxVolt;
+      const prevA = state.config.maxAmp;
+      const prevS = state.config.maxSmoke;
+
       state.config.server = $('cfgServer').value.trim() || 'blynk.cloud';
       state.config.token = $('cfgToken').value.trim();
       state.config.rate = parseFloat($('cfgRate').value) || 4.5;
-      state.config.maxAmp = parseFloat($('cfgMaxAmp').value) || 10.0;
       state.config.gasUrl = $('cfgGasUrl').value.trim();
+
+      const clamped = clampSafetyThresholds({
+        maxVolt: $('cfgMaxVolt').value,
+        maxAmp: $('cfgMaxAmp').value,
+        maxSmoke: $('cfgMaxSmoke').value,
+      });
+      Object.assign(state.config, clamped);
+
       const newCycle = parseInt($('cfgResetCycle').value, 10) || 0;
       if (newCycle !== state.config.resetCycleDays) {
         state.config.resetCycleDays = newCycle;
@@ -293,7 +297,11 @@
       });
       saveConfig();
       $('settingsModal').classList.add('hidden');
-      toast('บันทึกการตั้งค่าแล้ว', 'success');
+
+      const changed = prevV !== clamped.maxVolt || prevA !== clamped.maxAmp || prevS !== clamped.maxSmoke;
+      await syncSettingsToCloud(changed);
+      toast('บันทึกการตั้งค่าและเกณฑ์ปลอดภัยแล้ว', 'success');
+      render();
       syncDevice();
       fetchCloudLogs(true);
     };
@@ -310,12 +318,19 @@
     };
 
     // System Test Bench (SIMULATION mode)
-    $('btnTestOverAmp').onclick = () => {
-      const maxAmp = Number(state.config.maxAmp) || 10.0;
-      state.simFault = 'OVER_AMP';
-      state.autoMode = false;
+    $('btnTestOverVolt').onclick = () => {
+      state.simFault = 'OVER_VOLT';
       state.config.channels.forEach((c) => { c.state = false; });
-      state.power.c = maxAmp + 1.25;
+      state.power.v = state.config.maxVolt + 6.5;
+      pushLog('SAFETY TEST', `จำลองแรงดันเกิน ${state.power.v.toFixed(1)}V → ตัดไฟทั้งหมด`, 'Safety');
+      toast('จำลองแรงดันเกินพิกัดและตัดไฟอัตโนมัติแล้ว', 'error');
+      render();
+    };
+
+    $('btnTestOverAmp').onclick = () => {
+      state.simFault = 'OVER_AMP';
+      state.config.channels.forEach((c) => { c.state = false; });
+      state.power.c = state.config.maxAmp + 1.25;
       state.power.p = state.power.v * state.power.c * 0.98;
       pushLog('SAFETY TEST', `จำลองกระแสเกิน ${state.power.c.toFixed(2)}A → ตัดไฟทั้งหมด`, 'Safety');
       toast('จำลองกระแสเกินพิกัดและตัดไฟอัตโนมัติแล้ว', 'error');
@@ -324,10 +339,9 @@
 
     $('btnTestSmoke').onclick = () => {
       state.simFault = 'SMOKE';
-      state.autoMode = false;
       state.config.channels.forEach((c) => { c.state = false; });
-      state.smoke = 76;
-      pushLog('SAFETY TEST', 'จำลองตรวจพบควัน 76% (MQ-2) → ตัดไฟทั้งหมด', 'Safety');
+      state.smoke = Math.min(95, state.config.maxSmoke + 15);
+      pushLog('SAFETY TEST', `จำลองตรวจพบควัน ${state.smoke}% (MQ-2) → ตัดไฟทั้งหมด`, 'Safety');
       toast('จำลองตรวจพบควัน MQ-2 และตัดไฟอัตโนมัติแล้ว', 'error');
       render();
     };
@@ -335,6 +349,7 @@
     $('btnTestReset').onclick = () => {
       state.simFault = null;
       state.smoke = 8;
+      state.power.v = 220.4;
       state.power.c = 0;
       state.power.p = 0;
       toast('รีเซ็ตสถานะระบบกลับสู่ปกติแล้ว', 'success');
@@ -345,7 +360,6 @@
       if (state.isTestingSeq) return;
       state.isTestingSeq = true;
       state.simFault = null;
-      state.autoMode = false;
       toast('เริ่มทดสอบรีเลย์เรียงช่อง 1 → 4...', 'info');
       for (let i = 0; i < state.config.channels.length; i += 1) {
         state.config.channels.forEach((c, idx) => { c.state = idx === i; });
