@@ -77,7 +77,7 @@
       overflow: hidden;
       background: var(--grad-hero);
       color: #f4f8ff;
-      padding-bottom: 68px;
+      padding-bottom: 48px;
     }
 
     .pcb-grid {
@@ -172,7 +172,7 @@
     .hero-body {
       position: relative;
       z-index: 2;
-      padding: 22px 0 14px;
+      padding: 14px 0 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -193,7 +193,7 @@
       margin-bottom: 8px;
     }
 
-    .hero-title { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.25; }
+    .hero-title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.25; }
     .hero-sub { margin: 6px 0 0; font-size: 13px; color: rgba(235, 245, 255, 0.90); }
     .hero-chip { flex-shrink: 0; opacity: 0.92; }
 
@@ -211,7 +211,7 @@
     .main {
       position: relative;
       z-index: 5;
-      margin-top: -44px;
+      margin-top: -30px;
       padding-bottom: 48px;
       flex: 1;
       display: flex;
@@ -688,6 +688,68 @@
     .toast-item.is-success { background: var(--cobalt); }
     .toast-item.is-error { background: var(--err); }
 
+    @keyframes ledPulse {
+      0%, 100% { box-shadow: 0 0 6px #6ee7b7; opacity: 1; }
+      50% { box-shadow: 0 0 14px #6ee7b7; opacity: 0.72; }
+    }
+    .led-dot:not(.is-offline) { animation: ledPulse 2.2s ease-in-out infinite; }
+    @keyframes safetyPulse {
+      0%, 100% { box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28); }
+      50% { box-shadow: 0 8px 28px rgba(220, 38, 38, 0.55); }
+    }
+    .alert-safety:not(.hidden) { animation: safetyPulse 1.3s ease-in-out infinite; }
+    .ch-card.is-on { border-top: 2px solid var(--cobalt); }
+    .ch-card.is-pending { opacity: 0.78; }
+    .ch-state-pill {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      color: var(--text-muted);
+    }
+    .ch-card.is-on .ch-state-pill {
+      background: var(--ok-soft);
+      color: #047857;
+    }
+    .gear-btn.is-muted { opacity: 0.65; }
+    .pzem-telemetry-foot {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .load-gauge-track {
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: #d8e3ef;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .load-gauge-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--cyan);
+      transition: width 250ms ease, background 200ms ease;
+    }
+    .spark-box {
+      background: var(--pzem-bg);
+      border: 1px solid var(--pzem-border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .spark-svg { width: 100%; height: 32px; display: block; }
+    @media (max-width: 640px) {
+      .pzem-telemetry-foot { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 1024px) {
       .power-grid { grid-template-columns: 1fr; }
       .ch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -720,8 +782,9 @@
             <span style="opacity:0.5;">•</span>
             <span id="lastSyncTime">--:--:--</span>
           </div>
-          <button id="btnToggleMode" type="button" class="mode-btn mono">SIMULATION</button>
-          <button id="btnOpenSettings" type="button" class="gear-btn" title="ตั้งค่า" aria-label="ตั้งค่า">
+          <button id="btnToggleMode" data-testid="mode-toggle" type="button" class="mode-btn mono">SIMULATION</button>
+          <button id="btnToggleSound" data-testid="btn-sound" type="button" class="gear-btn mono" title="เปิด/ปิดเสียง" aria-label="เปิด/ปิดเสียง" aria-pressed="true">🔊</button>
+          <button id="btnOpenSettings" data-testid="btn-settings" type="button" class="gear-btn" title="ตั้งค่า" aria-label="ตั้งค่า">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <circle cx="12" cy="12" r="3" />
@@ -734,7 +797,7 @@
         <div>
           <div class="hero-badge mono">ESP32 • PZEM-004T • MQ-2 SAFETY</div>
           <h1 class="hero-title">ควบคุมไฟฟ้าอัจฉริยะ &amp; วัดพลังงาน</h1>
-          <p class="hero-sub">ตัดไฟอัตโนมัติเมื่อกระแสเกิน 10A หรือตรวจพบควัน • คำนวณค่าไฟเรียลไทม์</p>
+          <p class="hero-sub">ตัดไฟอัตโนมัติเมื่อแรงดัน/กระแสเกินเกณฑ์ หรือตรวจพบควัน • คำนวณค่าไฟเรียลไทม์</p>
         </div>
         <div class="hero-chip" aria-hidden="true">
           <svg width="124" height="96" viewBox="0 0 132 104" fill="none">
@@ -781,13 +844,13 @@
 
       <div class="master-btns">
         <button id="btnManualSync" type="button" class="btn mono">↻ SYNC</button>
-        <button id="btnAllOn" type="button" class="btn btn-primary">เปิดทั้งหมด</button>
-        <button id="btnAllOffPrompt" type="button" class="btn btn-danger-soft">ปิดทั้งหมด</button>
+        <button id="btnAllOn" data-testid="btn-all-on" type="button" class="btn btn-primary">เปิดทั้งหมด</button>
+        <button id="btnAllOffPrompt" data-testid="btn-all-off" type="button" class="btn btn-danger-soft">ปิดทั้งหมด</button>
       </div>
     </section>
 
     <!-- EMERGENCY & OFFLINE BANNERS -->
-    <div id="safetyAlert" class="alert-safety hidden">
+    <div id="safetyAlert" data-testid="safety-alert" class="alert-safety hidden">
       <div style="font-size:13px;font-weight:700;" id="safetyAlertText">🚨 แจ้งเตือนความปลอดภัย: ตรวจพบความผิดปกติ!</div>
       <span class="mono" style="font-size:10px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,0.22);font-weight:700;">AUTO CUTOFF</span>
     </div>
@@ -816,71 +879,10 @@
         <span class="mono" style="font-size:11px;color:var(--text-muted);">RELAY V0–V3 • TIMER V6–V9</span>
       </div>
       <div id="channelGrid" class="ch-grid">
-        <!-- Initial SSR preview cards (hydrated live by app.js?v=5) -->
-        <div class="ch-card is-on">
-          <div class="ch-body">
-            <div class="ch-top">
-              <div><span class="ch-badge mono">CH 01</span><span class="ch-pins mono">V0/V6</span></div>
-              <span class="ch-led"></span>
-            </div>
-            <div class="ch-main-row">
-              <h3 class="ch-name">ปลั๊กไฟตัวที่ 1 (GPIO 26)</h3>
-              <button type="button" class="switch-track is-on"><span class="switch-knob"></span></button>
-            </div>
-          </div>
-          <div class="ch-foot">
-            <span class="mono">⏰ 08:00–17:30 (ทุกวัน)</span>
-            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
-          </div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-body">
-            <div class="ch-top">
-              <div><span class="ch-badge mono">CH 02</span><span class="ch-pins mono">V1/V7</span></div>
-              <span class="ch-led"></span>
-            </div>
-            <div class="ch-main-row">
-              <h3 class="ch-name">ปลั๊กไฟตัวที่ 2 (GPIO 27)</h3>
-              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
-            </div>
-          </div>
-          <div class="ch-foot">
-            <span>ไม่ได้ตั้งเวลา</span>
-            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
-          </div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-body">
-            <div class="ch-top">
-              <div><span class="ch-badge mono">CH 03</span><span class="ch-pins mono">V2/V8</span></div>
-              <span class="ch-led"></span>
-            </div>
-            <div class="ch-main-row">
-              <h3 class="ch-name">ปลั๊กไฟตัวที่ 3 (GPIO 14)</h3>
-              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
-            </div>
-          </div>
-          <div class="ch-foot">
-            <span>ไม่ได้ตั้งเวลา</span>
-            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
-          </div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-body">
-            <div class="ch-top">
-              <div><span class="ch-badge mono">CH 04</span><span class="ch-pins mono">V3/V9</span></div>
-              <span class="ch-led"></span>
-            </div>
-            <div class="ch-main-row">
-              <h3 class="ch-name">ปลั๊กไฟตัวที่ 4 (GPIO 13)</h3>
-              <button type="button" class="switch-track"><span class="switch-knob"></span></button>
-            </div>
-          </div>
-          <div class="ch-foot">
-            <span>ไม่ได้ตั้งเวลา</span>
-            <button type="button" class="ch-sched-btn">ตั้งเวลา</button>
-          </div>
-        </div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 01</span><span class="ch-pins mono">V0/V6</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 1 (GPIO 26)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 02</span><span class="ch-pins mono">V1/V7</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 2 (GPIO 27)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 03</span><span class="ch-pins mono">V2/V8</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 3 (GPIO 14)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 04</span><span class="ch-pins mono">V3/V9</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 4 (GPIO 13)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
       </div>
     </section>
 
@@ -892,12 +894,11 @@
             <h2 class="section-title">มิเตอร์วัดพลังงานไฟฟ้า (PZEM-004T)</h2>
             <p class="section-sub" id="lblPzemLimits">Open CT สายเมนรวม • ตัดไฟเมื่อ ≥ 245V หรือ ≥ 10.0A</p>
           </div>
-          <button id="btnClearEnergy" type="button" class="btn mono" style="min-height:32px;font-size:11px;">Clear Energy (V13)</button>
         </div>
 
         <div class="pzem-grid">
           <div class="pzem-cell">
-            <div class="mono pzem-val" id="valVoltage">220.4V</div>
+            <div class="mono pzem-val" id="valVoltage">0.0V</div>
             <div class="pzem-lbl">Voltage (แรงดัน)</div>
           </div>
           <div class="pzem-cell" id="boxCurrent">
@@ -909,16 +910,35 @@
             <div class="pzem-lbl">Power (กำลังไฟ)</div>
           </div>
           <div class="pzem-cell">
-            <div class="mono pzem-val is-energy" id="valEnergy">1.245kWh</div>
+            <div class="mono pzem-val is-energy" id="valEnergy">0.000kWh</div>
             <div class="pzem-lbl">Energy (หน่วยสะสม)</div>
           </div>
           <div class="pzem-cell">
-            <div class="mono pzem-val" id="valFreq">50.0Hz</div>
+            <div class="mono pzem-val" id="valFreq">0.0Hz</div>
             <div class="pzem-lbl">Frequency (ความถี่)</div>
           </div>
           <div class="pzem-cell">
-            <div class="mono pzem-val" id="valPf">0.98</div>
+            <div class="mono pzem-val" id="valPf">0.00</div>
             <div class="pzem-lbl">Power Factor</div>
+          </div>
+        </div>
+
+        <div class="pzem-telemetry-foot">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;">
+              <span style="color:var(--text-secondary);font-weight:600;">โหลดกระแสเทียบเกณฑ์ V5</span>
+              <span id="lblLoadPct" class="mono" style="font-weight:700;color:var(--cobalt);">0% (0.00 / 10.0A)</span>
+            </div>
+            <div class="load-gauge-track"><div id="loadGaugeFill" class="load-gauge-fill"></div></div>
+          </div>
+          <div class="spark-box">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;">
+              <span>แนวโน้มกำลังไฟ (W)</span>
+              <span id="lblSparkMax" class="mono" style="color:#38d9f5;">0W</span>
+            </div>
+            <svg id="powerSparkline" class="spark-svg" viewBox="0 0 200 32" preserveAspectRatio="none">
+              <polyline id="sparkLinePath" fill="none" stroke="#38d9f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="0,30 200,30" />
+            </svg>
           </div>
         </div>
       </div>
@@ -930,12 +950,15 @@
             <span class="mono rate-pill" id="lblRate">4.50 ฿/หน่วย</span>
           </div>
           <div style="margin:6px 0;">
-            <span class="mono cost-num" id="valCost">5.60</span>
+            <span class="mono cost-num" id="valCost">0.00</span>
             <span style="font-size:13px;font-weight:600;color:var(--text-muted);margin-left:4px;">บาท</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;">
             <span id="lblResetCycle" class="mono" style="font-size:11px;color:var(--text-secondary);">รอบรีเซ็ต: รีเซ็ตเอง</span>
-            <button id="btnOpenBilling" type="button" class="ch-sched-btn" style="font-size:11px;">ประวัติบิล</button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button id="btnResetCost" data-testid="btn-reset-cost" type="button" class="btn btn-sm btn-danger-soft" style="min-height:28px;font-size:11px;">รีเซ็ตค่าไฟเอง (V13)</button>
+              <button id="btnOpenBilling" data-testid="btn-billing" type="button" class="ch-sched-btn" style="font-size:11px;">ประวัติบิล</button>
+            </div>
           </div>
         </div>
 
@@ -949,10 +972,10 @@
           </div>
           <div style="display:flex;justify-content:space-between;font-size:12px;">
             <span style="color:var(--text-secondary);">ระดับความเข้มข้นควัน</span>
-            <span class="mono" style="font-weight:700;" id="valSmoke">8%</span>
+            <span class="mono" style="font-weight:700;" id="valSmoke">0%</span>
           </div>
           <div class="smoke-track">
-            <div id="smokeBar" class="smoke-fill" style="width: 8%;"></div>
+            <div id="smokeBar" class="smoke-fill" style="width: 0%;"></div>
           </div>
         </div>
       </div>
@@ -988,14 +1011,7 @@
               <th class="td-right">SOURCE</th>
             </tr>
           </thead>
-          <tbody id="logTableBody">
-            <tr>
-              <td class="mono" style="color:var(--text-muted);">--:--:--</td>
-              <td style="font-weight:600;">CH1 • ช่องที่ 1</td>
-              <td>รอโหลดข้อมูลจาก app.js</td>
-              <td class="td-right"><span class="src-badge src-web mono">Web Dashboard</span></td>
-            </tr>
-          </tbody>
+          <tbody id="logTableBody"></tbody>
         </table>
       </div>
     </section>
@@ -1143,8 +1159,8 @@
     </div>
   </div>
 
-  <script src="core.js?v=11"></script>
-  <script src="api.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="core.js?v=17"></script>
+  <script src="api.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
