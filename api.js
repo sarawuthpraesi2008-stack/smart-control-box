@@ -160,7 +160,11 @@
           `V10=Web%20Dashboard&V13=${encodeURIComponent(state.config.resetCycleDays)}&V5=${encodeURIComponent(csv)}`
         );
       } catch (_) {
-        if (SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V13/V5 ไป Blynk ไม่สำเร็จ', 'error');
+        let anyOk = false;
+        for (const p of [`V10=Web%20Dashboard`, `V13=${encodeURIComponent(state.config.resetCycleDays)}`, `V5=${encodeURIComponent(csv)}`]) {
+          try { await blynkUpdate(p); anyOk = true; } catch (__) {}
+        }
+        if (!anyOk && SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V13/V5 ไป Blynk ไม่สำเร็จ (เช็ก Datastream V5=String, V13=Int)', 'error');
       }
     }
     postToGas({ type: 'config', rate: Number(state.config.rate) || 4.5, channelNames: state.config.channels.map((c) => c.name) });
