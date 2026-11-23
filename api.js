@@ -51,8 +51,10 @@
     isSyncing: false,
     lastSync: null,
     activeSchedId: 1,
-    power: { v: 220.4, c: 0.0, p: 0.0, e: 1.245, f: 50.0, pf: 0.98 },
-    smoke: 8,
+    power: { v: 0, c: 0, p: 0, e: 0, f: 0, pf: 0 },
+    powerHistory: [],
+    simEnergy: 1.245,
+    smoke: 0,
     simFault: null,
     isTestingSeq: false,
     config: loadConfig(),
@@ -74,21 +76,23 @@
     }
   }
 
+  function postToGas(payload) {
+    if (!state.config.gasUrl) return;
+    fetchWithTimeout(state.config.gasUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+
   function pushLog(channel, action, source = 'Web Dashboard', status = 'SUCCESS', notifyLine = false) {
     const now = new Date();
     const timeShort = now.toLocaleTimeString('th-TH', { hour12: false });
     const dateStr = now.toLocaleDateString('th-TH');
     state.logs.unshift({ timeShort, dateStr, time: `${dateStr} ${timeShort}`, channel, action, source, status });
     saveLogs();
-
-    if (state.config.gasUrl) {
-      fetchWithTimeout(state.config.gasUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, action, source, status, notifyLine }),
-      }).catch(() => {});
-    }
+    postToGas({ channel, action, source, status, notifyLine });
   }
 
   async function blynkUpdate(params) {
@@ -101,10 +105,6 @@
     const base = `https://${state.config.server}/external/api/batch/update?token=${encodeURIComponent(state.config.token)}`;
     const res = await fetchWithTimeout(`${base}&${params}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  }
-
-  async function notifySource() {
-    try { await blynkUpdate('V10=Web%20Dashboard'); } catch (_) {}
   }
 
   async function performEnergyReset(reasonLabel, sourceLabel = 'Web Dashboard') {
@@ -125,7 +125,16 @@
     });
     saveBilling();
 
+    postToGas({
+      type: 'billing',
+      cycle: reasonLabel,
+      kwh: Number(kwh.toFixed(3)),
+      rate: Number(rate.toFixed(2)),
+      cost: Number(cost.toFixed(2)),
+    });
+
     state.power.e = 0;
+    if (state.config.mode === 'SIMULATION') state.simEnergy = 0;
     state.config.lastEnergyResetAt = now.toISOString();
     saveConfig();
 
@@ -134,6 +143,7 @@
   }
 
   async function checkAutoEnergyReset() {
+    if (state.config.mode !== 'SIMULATION') return;
     const info = getNextResetInfo(state.config.lastEnergyResetAt, state.config.resetCycleDays);
     if (!info.enabled || !info.due) return;
     try {
@@ -153,10 +163,17 @@
         if (SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V13/V5 ไป Blynk ไม่สำเร็จ', 'error');
       }
     }
+    postToGas({ type: 'config', rate: Number(state.config.rate) || 4.5, channelNames: state.config.channels.map((c) => c.name) });
     if (thresholdsChanged) {
       const msg = `อัปเดตเกณฑ์ตัดไฟ (V5): แรงดัน >= ${state.config.maxVolt}V | กระแส >= ${state.config.maxAmp.toFixed(1)}A | ควัน >= ${state.config.maxSmoke}%`;
       pushLog('SAFETY CONFIG', msg, 'Web Dashboard', 'SUCCESS', true);
     }
+  }
+
+  function recordPowerHistory(watts) {
+    const w = Math.max(0, Math.round(Number(watts) || 0));
+    state.powerHistory.push(w);
+    if (state.powerHistory.length > 20) state.powerHistory.shift();
   }
 
   async function syncDevice() {
@@ -174,10 +191,12 @@
         state.power.v = simVolt;
         state.power.c = simAmp;
         state.power.p = simVolt * simAmp * 0.98;
-        state.power.e += (state.power.p / 1000) * (4 / 3600);
+        state.simEnergy += (state.power.p / 1000) * (4 / 3600);
+        state.power.e = state.simEnergy;
         state.power.f = 50.0;
         state.power.pf = activeCh > 0 || state.simFault === 'OVER_AMP' ? 0.98 : 0.0;
         state.smoke = state.simFault === 'SMOKE' ? Math.min(95, state.config.maxSmoke + 15) : 6 + Math.floor(Math.random() * 4);
+        recordPowerHistory(state.power.p);
         state.lastSync = new Date();
         return;
       }
@@ -206,11 +225,12 @@
           });
           if (d.V11 !== undefined) {
             const parsed = parsePzemCsv(d.V11);
-            if (parsed) state.power = parsed;
+            if (parsed) { state.power = parsed; recordPowerHistory(parsed.p); }
           }
           if (d.V12 !== undefined) state.smoke = Number(d.V12) || 0;
           if (d.V13 !== undefined && !Number.isNaN(Number(d.V13))) {
-            const cVal = parseInt(d.V13, 10); if (!Number.isNaN(cVal) && cVal !== 99) state.config.resetCycleDays = cVal;
+            const cVal = parseInt(d.V13, 10);
+            if (!Number.isNaN(cVal) && cVal !== 99) state.config.resetCycleDays = cVal;
           }
           if (d.V5 !== undefined) {
             const limits = parseSafetyThresholds(d.V5);
@@ -227,6 +247,30 @@
     }
   }
 
+  async function fetchCloudConfig(silent = true) {
+    if (!state.config.gasUrl) return;
+    try {
+      const sep = state.config.gasUrl.includes('?') ? '&' : '?';
+      const res = await fetchWithTimeout(`${state.config.gasUrl}${sep}type=config`);
+      if (!res.ok) return;
+      const cfg = await res.json();
+      if (cfg && typeof cfg === 'object') {
+        if (cfg.rate !== undefined && Number(cfg.rate) > 0) {
+          state.config.rate = Number(cfg.rate);
+        }
+        if (Array.isArray(cfg.channelNames) && cfg.channelNames.length === 4) {
+          cfg.channelNames.forEach((name, idx) => {
+            const clean = String(name || '').trim();
+            if (clean) state.config.channels[idx].name = clean;
+          });
+        }
+        saveConfig();
+        if (SCB.render) SCB.render();
+        if (!silent && SCB.toast) SCB.toast('ซิงก์การตั้งค่าจากคลาวด์แล้ว', 'success');
+      }
+    } catch (_) {}
+  }
+
   async function fetchCloudLogs(silent = true) {
     if (!state.config.gasUrl) return;
     try {
@@ -241,6 +285,24 @@
       }
     } catch (_) {
       if (!silent && SCB.toast) SCB.toast('ดึงประวัติไม่สำเร็จ', 'error');
+    }
+  }
+
+  async function fetchBillingHistory(silent = true) {
+    if (!state.config.gasUrl) return;
+    try {
+      const sep = state.config.gasUrl.includes('?') ? '&' : '?';
+      const res = await fetchWithTimeout(`${state.config.gasUrl}${sep}type=billing`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        state.billingHistory = data;
+        saveBilling();
+        if (SCB.renderBillingTable) SCB.renderBillingTable();
+        if (!silent && SCB.toast) SCB.toast('อัปเดตประวัติบิลจาก Sheets แล้ว', 'success');
+      }
+    } catch (_) {
+      if (!silent && SCB.toast) SCB.toast('ดึงประวัติบิลไม่สำเร็จ', 'error');
     }
   }
 
@@ -278,7 +340,7 @@
     try {
       if (state.config.mode === 'LIVE') {
         if (!state.isOnline) throw new Error('บอร์ด Offline');
-        await notifySource();
+        try { await blynkUpdate('V10=Web%20Dashboard'); } catch (_) {}
         const p = ch.schedPin;
         await blynkUpdate(`${p}=${hhmmToSec(start)}&${p}=${hhmmToSec(stop)}&${p}=Asia/Bangkok&${p}=${encodeURIComponent(isOff ? '' : daysCsv)}&${p}=25200`);
       }
@@ -305,8 +367,11 @@
     performEnergyReset,
     checkAutoEnergyReset,
     syncSettingsToCloud,
+    recordPowerHistory,
     syncDevice,
+    fetchCloudConfig,
     fetchCloudLogs,
+    fetchBillingHistory,
     toggleChannel,
     saveSchedule,
   });
