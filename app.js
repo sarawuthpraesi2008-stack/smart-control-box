@@ -4,10 +4,80 @@
   const {
     state, esc, clampSafetyThresholds, getNextResetInfo, saveConfig, saveBilling,
     pushLog, blynkBatch, performEnergyReset, syncSettingsToCloud,
-    syncDevice, fetchCloudLogs, toggleChannel, saveSchedule,
+    recordPowerHistory, syncDevice, fetchCloudConfig, fetchCloudLogs, fetchBillingHistory, toggleChannel, saveSchedule,
   } = SCB;
 
   const $ = (id) => document.getElementById(id);
+
+  const SOUND_KEY = `${SCB.STORAGE_KEY}_sound`;
+  let soundEnabled = localStorage.getItem(SOUND_KEY) !== 'false';
+  let audioCtx = null;
+  let alarmTimer = null;
+
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      return audioCtx;
+    } catch (_) { return null; }
+  }
+
+  function playTone(freq, durationSec, type = 'sine', gainVal = 0.08, delaySec = 0) {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime + delaySec;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + durationSec);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + durationSec);
+    } catch (_) {}
+  }
+
+  function playSound(kind) {
+    if (!soundEnabled) return;
+    if (kind === 'click') {
+      playTone(520, 0.035, 'triangle', 0.09, 0);
+      playTone(260, 0.025, 'sine', 0.06, 0.02);
+    } else if (kind === 'success') {
+      playTone(1046, 0.09, 'sine', 0.06, 0);
+      playTone(1318, 0.14, 'sine', 0.06, 0.08);
+    } else if (kind === 'alarm') {
+      playTone(880, 0.16, 'square', 0.07, 0);
+      playTone(660, 0.18, 'square', 0.07, 0.18);
+    }
+  }
+
+  function syncAlarmLoop(isDanger) {
+    if (isDanger && soundEnabled) {
+      if (!alarmTimer) {
+        playSound('alarm');
+        alarmTimer = setInterval(() => {
+          if (soundEnabled) playSound('alarm');
+        }, 1400);
+      }
+    } else if (alarmTimer) {
+      clearInterval(alarmTimer);
+      alarmTimer = null;
+    }
+  }
+
+  function renderSoundButton() {
+    const btn = $('btnToggleSound');
+    if (!btn) return;
+    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    btn.setAttribute('aria-pressed', String(soundEnabled));
+    btn.classList.toggle('is-muted', !soundEnabled);
+  }
 
   function toast(msg, type = 'info') {
     const el = document.createElement('div');
@@ -65,8 +135,27 @@
     badge.textContent = isSmokeDanger ? 'อันตราย! พบควัน' : 'ปกติ (SAFE)';
     badge.className = `mono smoke-badge ${isSmokeDanger ? 'is-danger' : ''}`;
 
+    const loadPct = Math.min(100, Math.round((c / maxAmp) * 100));
+    $('lblLoadPct').textContent = `${loadPct}% (${c.toFixed(2)} / ${maxAmp.toFixed(1)}A)`;
+    const loadFill = $('loadGaugeFill');
+    loadFill.style.width = `${loadPct}%`;
+    loadFill.style.background = loadPct >= 100 ? '#dc2626' : loadPct >= 75 ? '#f59e0b' : '#15a8c4';
+
+    const hist = state.powerHistory.length ? state.powerHistory : [Math.round(p)];
+    const maxW = Math.max(100, ...hist);
+    $('lblSparkMax').textContent = `${Math.round(p)}W (Peak ${maxW}W)`;
+    const pts = hist.length === 1
+      ? `0,${30 - Math.round((hist[0] / maxW) * 26)} 200,${30 - Math.round((hist[0] / maxW) * 26)}`
+      : hist.map((wVal, idx) => {
+          const x = Math.round((idx / (hist.length - 1)) * 200);
+          const y = 30 - Math.round((wVal / maxW) * 26);
+          return `${x},${y}`;
+        }).join(' ');
+    $('sparkLinePath').setAttribute('points', pts);
+
+    const isDanger = isSmokeDanger || isOverAmp || isOverVolt;
     const alertEl = $('safetyAlert');
-    if (isSmokeDanger || isOverAmp || isOverVolt) {
+    if (isDanger) {
       alertEl.classList.remove('hidden');
       $('safetyAlertText').textContent = isSmokeDanger
         ? `🚨 ตรวจพบควันในตู้ (${state.smoke}% / ${maxSmoke}%) — ระบบสั่งตัดไฟอัตโนมัติ!`
@@ -76,6 +165,7 @@
     } else {
       alertEl.classList.add('hidden');
     }
+    syncAlarmLoop(isDanger);
   }
 
   function renderChannels() {
@@ -83,15 +173,18 @@
     $('channelGrid').innerHTML = state.config.channels.map((ch) => {
       const isOn = ch.state;
       return `
-        <div class="ch-card ${isOn ? 'is-on' : ''}">
+        <div class="ch-card ${isOn ? 'is-on' : ''} ${ch.pending ? 'is-pending' : ''}">
           <div class="ch-body">
             <div class="ch-top">
               <div><span class="ch-badge mono">CH 0${ch.id}</span><span class="ch-pins mono">${ch.pin}/${ch.schedPin}</span></div>
-              <span class="ch-led"></span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="ch-state-pill mono">${ch.pending ? 'SYNC' : isOn ? 'ON' : 'OFF'}</span>
+                <span class="ch-led"></span>
+              </div>
             </div>
             <div class="ch-main-row">
               <h3 class="ch-name">${esc(ch.name)}</h3>
-              <button type="button" role="switch" aria-checked="${isOn}" data-ch="${ch.id}" ${off || ch.pending ? 'disabled' : ''}
+              <button type="button" role="switch" aria-checked="${isOn}" data-ch="${ch.id}" data-testid="ch-switch-${ch.id}" ${off || ch.pending ? 'disabled' : ''}
                 class="ch-switch switch-track ${isOn ? 'is-on' : ''}">
                 <span class="switch-knob"></span>
               </button>
@@ -99,7 +192,7 @@
           </div>
           <div class="ch-foot">
             <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${formatSchedule(ch.schedule, isOn)}</div>
-            <button type="button" data-sched="${ch.id}" class="ch-sched ch-sched-btn">ตั้งเวลา</button>
+            <button type="button" data-sched="${ch.id}" data-testid="ch-sched-${ch.id}" class="ch-sched ch-sched-btn">ตั้งเวลา</button>
           </div>
         </div>`;
     }).join('');
@@ -168,20 +261,38 @@
       .map((c, i) => `<div class="mini-bar ${c.state ? 'is-on' : ''}" style="height:${heights[i]}px;"></div>`)
       .join('');
 
+    renderSoundButton();
     renderPowerAndSafety();
     renderChannels();
     renderLogs();
   }
 
+  SCB.isAlarmActive = () => Boolean(alarmTimer);
+  SCB.isSoundEnabled = () => soundEnabled;
   SCB.toast = toast;
   SCB.render = render;
   SCB.renderLogs = renderLogs;
+  SCB.renderBillingTable = renderBillingTable;
 
   function bindEvents() {
+    $('btnToggleSound').onclick = () => {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem(SOUND_KEY, String(soundEnabled));
+      renderSoundButton();
+      if (!soundEnabled) syncAlarmLoop(false);
+      else {
+        playSound('click');
+        renderPowerAndSafety();
+      }
+    };
     $('btnToggleMode').onclick = () => {
       state.config.mode = state.config.mode === 'SIMULATION' ? 'LIVE' : 'SIMULATION';
+      state.power = { v: 0, c: 0, p: 0, e: 0, f: 0, pf: 0 };
+      state.smoke = 0;
+      state.simFault = null;
       if (state.config.mode === 'SIMULATION') state.isOnline = true;
       saveConfig();
+      render();
       syncDevice();
     };
     $('btnManualSync').onclick = syncDevice;
@@ -189,10 +300,11 @@
     $('btnFetchCloudLogs').onclick = () => fetchCloudLogs(false);
     $('logFilter').onchange = renderLogs;
 
-    $('btnClearEnergy').onclick = async () => {
+    $('btnResetCost').onclick = async () => {
       if (!confirm('ยืนยันบันทึกยอดและรีเซ็ตหน่วยไฟฟ้าสะสม (kWh) เป็น 0?')) return;
       try {
         await performEnergyReset('รีเซ็ตเอง', 'Web Dashboard');
+        playSound('success');
         toast('บันทึกประวัติและรีเซ็ตหน่วยไฟฟ้าเป็น 0 แล้ว', 'success');
       } catch (e) { toast(e.message, 'error'); }
     };
@@ -202,6 +314,7 @@
       try {
         if (state.config.mode === 'LIVE') await blynkBatch('V10=Web%20Dashboard&V4=1');
         state.config.channels.forEach((c) => { c.state = true; });
+        playSound('click');
         pushLog('MASTER (V4)', 'เปิดทั้งหมด (ALL ON)');
         render();
       } catch (e) { toast(e.message, 'error'); }
@@ -215,6 +328,7 @@
       try {
         if (state.config.mode === 'LIVE') await blynkBatch('V10=Web%20Dashboard&V4=0');
         state.config.channels.forEach((c) => { c.state = false; });
+        playSound('click');
         pushLog('MASTER (V4)', 'ปิดทั้งหมด (ALL OFF)');
         render();
       } catch (e) { toast(e.message, 'error'); }
@@ -222,7 +336,7 @@
 
     $('channelGrid').onclick = (e) => {
       const sw = e.target.closest('.ch-switch');
-      if (sw && !sw.disabled) return toggleChannel(Number(sw.dataset.ch));
+      if (sw && !sw.disabled) { playSound('click'); return toggleChannel(Number(sw.dataset.ch)); }
       const sc = e.target.closest('.ch-sched');
       if (sc) {
         state.activeSchedId = Number(sc.dataset.sched);
@@ -300,13 +414,19 @@
 
       const changed = prevV !== clamped.maxVolt || prevA !== clamped.maxAmp || prevS !== clamped.maxSmoke;
       await syncSettingsToCloud(changed);
+      playSound('success');
       toast('บันทึกการตั้งค่าและเกณฑ์ปลอดภัยแล้ว', 'success');
       render();
       syncDevice();
       fetchCloudLogs(true);
+      fetchBillingHistory(true);
     };
 
-    $('btnOpenBilling').onclick = () => { renderBillingTable(); $('billingModal').classList.remove('hidden'); };
+    $('btnOpenBilling').onclick = () => {
+      renderBillingTable();
+      $('billingModal').classList.remove('hidden');
+      fetchBillingHistory(true);
+    };
     $('btnCloseBillingX').onclick = () => $('billingModal').classList.add('hidden');
     $('btnCloseBilling').onclick = () => $('billingModal').classList.add('hidden');
     $('btnClearBilling').onclick = () => {
@@ -349,9 +469,11 @@
     $('btnTestReset').onclick = () => {
       state.simFault = null;
       state.smoke = 8;
-      state.power.v = 220.4;
+      state.power.v = 0;
       state.power.c = 0;
       state.power.p = 0;
+      recordPowerHistory(0);
+      playSound('success');
       toast('รีเซ็ตสถานะระบบกลับสู่ปกติแล้ว', 'success');
       render();
     };
@@ -378,7 +500,9 @@
     bindEvents();
     render();
     syncDevice();
+    fetchCloudConfig(true);
     fetchCloudLogs(true);
+    fetchBillingHistory(true);
     setInterval(syncDevice, 4000);
     setInterval(() => fetchCloudLogs(true), 10000);
   }
