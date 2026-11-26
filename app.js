@@ -9,7 +9,42 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const THEME_KEY = `${SCB.STORAGE_KEY}_theme`;
+  let currentTheme = localStorage.getItem(THEME_KEY) || 'dark';
+
+  const ICON_SUN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+  const ICON_MOON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  const ICON_VOL_ON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  const ICON_VOL_OFF = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const btn = $('btnToggleTheme');
+    if (btn) btn.innerHTML = currentTheme === 'dark' ? ICON_SUN : ICON_MOON;
+  }
+
   const SOUND_KEY = `${SCB.STORAGE_KEY}_sound`;
+  let mq2WarmupSec = 0;
+  let mq2WarmupTimer = null;
+  let wasLiveOnline = false;
+  let ackFaultKey = null;
+
+  function startMq2Warmup(seconds = 60) {
+    mq2WarmupSec = Math.max(0, Number(seconds) || 0);
+    if (mq2WarmupTimer) clearInterval(mq2WarmupTimer);
+    if (mq2WarmupSec <= 0) {
+      mq2WarmupTimer = null;
+      return;
+    }
+    mq2WarmupTimer = setInterval(() => {
+      mq2WarmupSec = Math.max(0, mq2WarmupSec - 1);
+      if (mq2WarmupSec === 0) {
+        clearInterval(mq2WarmupTimer);
+        mq2WarmupTimer = null;
+      }
+      renderPowerAndSafety();
+    }, 1000);
+  }
   let soundEnabled = localStorage.getItem(SOUND_KEY) !== 'false';
   let audioCtx = null;
   let alarmTimer = null;
@@ -52,8 +87,11 @@
       playTone(1046, 0.09, 'sine', 0.06, 0);
       playTone(1318, 0.14, 'sine', 0.06, 0.08);
     } else if (kind === 'alarm') {
-      playTone(880, 0.16, 'square', 0.07, 0);
-      playTone(660, 0.18, 'square', 0.07, 0.18);
+      // High-urgency industrial dual-tone siren (louder + piercing sweep)
+      playTone(1380, 0.18, 'sawtooth', 0.28, 0);
+      playTone(960,  0.20, 'square',   0.26, 0.19);
+      playTone(1480, 0.18, 'sawtooth', 0.28, 0.40);
+      playTone(980,  0.22, 'square',   0.26, 0.59);
     }
   }
 
@@ -63,7 +101,7 @@
         playSound('alarm');
         alarmTimer = setInterval(() => {
           if (soundEnabled) playSound('alarm');
-        }, 1400);
+        }, 950);
       }
     } else if (alarmTimer) {
       clearInterval(alarmTimer);
@@ -74,7 +112,7 @@
   function renderSoundButton() {
     const btn = $('btnToggleSound');
     if (!btn) return;
-    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    btn.innerHTML = soundEnabled ? ICON_VOL_ON : ICON_VOL_OFF;
     btn.setAttribute('aria-pressed', String(soundEnabled));
     btn.classList.toggle('is-muted', !soundEnabled);
   }
@@ -95,7 +133,7 @@
     const dayList = String(sched.days || '').split(',').filter(Boolean);
     const dayTxt = dayList.length === 7 ? 'ทุกวัน' : dayList.map((d) => map[d] || '').join(',');
     const timeTxt = `${sched.start || ''}${sched.stop ? (sched.start ? '–' : 'ปิด ') + sched.stop : ''}`;
-    return `<span class="mono" style="font-weight:700;">⏰ ${esc(timeTxt)}</span> <span style="opacity:0.86;">(${esc(dayTxt)})</span>`;
+    return `<span class="mono" style="font-weight:700;">${esc(timeTxt)}</span> <span style="opacity:0.86;">(${esc(dayTxt)})</span>`;
   }
 
   function renderPowerAndSafety() {
@@ -131,15 +169,25 @@
     bar.style.width = `${Math.min(100, state.smoke)}%`;
     bar.style.background = isSmokeDanger ? '#dc2626' : state.smoke >= Math.round(maxSmoke * 0.6) ? '#f59e0b' : '#10b981';
 
+    const isWarmingUp = mq2WarmupSec > 0;
+    const warmupRow = $('mq2WarmupRow');
+    if (warmupRow) warmupRow.classList.toggle('hidden', !isWarmingUp);
+    if ($('mq2WarmupSec')) $('mq2WarmupSec').textContent = String(mq2WarmupSec);
+
     const badge = $('smokeBadge');
-    badge.textContent = isSmokeDanger ? 'อันตราย! พบควัน' : 'ปกติ (SAFE)';
-    badge.className = `mono smoke-badge ${isSmokeDanger ? 'is-danger' : ''}`;
+    if (isWarmingUp) {
+      badge.textContent = `WARM-UP ${mq2WarmupSec}s`;
+      badge.className = 'mono smoke-badge is-warmup';
+    } else {
+      badge.textContent = isSmokeDanger ? 'SMOKE ALERT' : 'SAFE';
+      badge.className = `mono smoke-badge ${isSmokeDanger ? 'is-danger' : ''}`;
+    }
 
     const loadPct = Math.min(100, Math.round((c / maxAmp) * 100));
     $('lblLoadPct').textContent = `${loadPct}% (${c.toFixed(2)} / ${maxAmp.toFixed(1)}A)`;
     const loadFill = $('loadGaugeFill');
     loadFill.style.width = `${loadPct}%`;
-    loadFill.style.background = loadPct >= 100 ? '#dc2626' : loadPct >= 75 ? '#f59e0b' : '#15a8c4';
+    loadFill.style.background = loadPct >= 100 ? '#E05252' : loadPct >= 75 ? '#E09F3E' : '#C5794B';
 
     const hist = state.powerHistory.length ? state.powerHistory : [Math.round(p)];
     const maxW = Math.max(100, ...hist);
@@ -153,17 +201,38 @@
         }).join(' ');
     $('sparkLinePath').setAttribute('points', pts);
 
-    const isDanger = isSmokeDanger || isOverAmp || isOverVolt;
+    const effectiveSmokeDanger = isSmokeDanger && !isWarmingUp;
+    const isDanger = effectiveSmokeDanger || isOverAmp || isOverVolt;
     const alertEl = $('safetyAlert');
+    const emergencyEl = $('emergencyModal');
     if (isDanger) {
-      alertEl.classList.remove('hidden');
-      $('safetyAlertText').textContent = isSmokeDanger
-        ? `🚨 ตรวจพบควันในตู้ (${state.smoke}% / ${maxSmoke}%) — ระบบสั่งตัดไฟอัตโนมัติ!`
+      const faultKey = effectiveSmokeDanger ? 'SMOKE' : isOverVolt ? 'OVER_VOLT' : 'OVER_AMP';
+      const titleTxt = effectiveSmokeDanger
+        ? 'อันตราย! ตรวจพบควันในตู้ควบคุม (MQ-2)'
         : isOverVolt
-          ? `⚡ ตรวจพบแรงดันเกินพิกัด (${v.toFixed(1)}V / ${maxVolt}V) — ระบบสั่งตัดไฟอัตโนมัติ!`
-          : `⚡ ตรวจพบกระแสเกินพิกัด (${c.toFixed(2)}A / ${maxAmp.toFixed(1)}A) — ระบบสั่งตัดไฟอัตโนมัติ!`;
+          ? 'อันตราย! แรงดันไฟฟ้าเกินพิกัด (Over-Voltage)'
+          : 'อันตราย! กระแสไฟฟ้าเกินพิกัด (Over-Current)';
+      const detailTxt = effectiveSmokeDanger
+        ? `ระดับควัน ${state.smoke}% เกินเกณฑ์ ${maxSmoke}% — ระบบสั่งตัดปลั๊กทั้ง 4 ช่องอัตโนมัติ`
+        : isOverVolt
+          ? `แรงดัน ${v.toFixed(1)}V เกินเกณฑ์ ${maxVolt}V — ระบบสั่งตัดปลั๊กทั้ง 4 ช่องอัตโนมัติ`
+          : `กระแส ${c.toFixed(2)}A เกินเกณฑ์ ${maxAmp.toFixed(1)}A — ระบบสั่งตัดปลั๊กทั้ง 4 ช่องอัตโนมัติ`;
+
+      alertEl.classList.remove('hidden');
+      $('safetyAlertText').textContent = detailTxt;
+
+      if (emergencyEl && ackFaultKey !== faultKey) {
+        $('emergencyTitle').textContent = titleTxt;
+        $('emergencyDetail').textContent = detailTxt;
+        if ($('btnEmergencyReset')) {
+          $('btnEmergencyReset').classList.toggle('hidden', state.config.mode !== 'SIMULATION');
+        }
+        emergencyEl.classList.remove('hidden');
+      }
     } else {
+      ackFaultKey = null;
       alertEl.classList.add('hidden');
+      if (emergencyEl) emergencyEl.classList.add('hidden');
     }
     syncAlarmLoop(isDanger);
   }
@@ -176,11 +245,8 @@
         <div class="ch-card ${isOn ? 'is-on' : ''} ${ch.pending ? 'is-pending' : ''}">
           <div class="ch-body">
             <div class="ch-top">
-              <div><span class="ch-badge mono">CH 0${ch.id}</span><span class="ch-pins mono">${ch.pin}/${ch.schedPin}</span></div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span class="ch-state-pill mono">${ch.pending ? 'SYNC' : isOn ? 'ON' : 'OFF'}</span>
-                <span class="ch-led"></span>
-              </div>
+              <div class="ch-id-group"><span class="ch-num">0${ch.id}</span><span class="ch-pins mono">${ch.pin}/${ch.schedPin}</span></div>
+              <span class="ch-state-pill mono">${ch.pending ? 'SYNC' : isOn ? 'ON' : 'OFF'}</span>
             </div>
             <div class="ch-main-row">
               <h3 class="ch-name">${esc(ch.name)}</h3>
@@ -240,6 +306,13 @@
 
   function render() {
     const isSim = state.config.mode === 'SIMULATION';
+    if (!isSim && state.isOnline && !wasLiveOnline) {
+      wasLiveOnline = true;
+      startMq2Warmup(60);
+    } else if (isSim || !state.isOnline) {
+      wasLiveOnline = false;
+      if (!isSim) startMq2Warmup(0);
+    }
     const modeBtn = $('btnToggleMode');
     modeBtn.textContent = isSim ? 'SIMULATION' : 'LIVE BLYNK';
     modeBtn.classList.toggle('is-live', !isSim);
@@ -261,6 +334,7 @@
       .map((c, i) => `<div class="mini-bar ${c.state ? 'is-on' : ''}" style="height:${heights[i]}px;"></div>`)
       .join('');
 
+    applyTheme();
     renderSoundButton();
     renderPowerAndSafety();
     renderChannels();
@@ -269,12 +343,21 @@
 
   SCB.isAlarmActive = () => Boolean(alarmTimer);
   SCB.isSoundEnabled = () => soundEnabled;
+  SCB.getWarmupSec = () => mq2WarmupSec;
   SCB.toast = toast;
   SCB.render = render;
   SCB.renderLogs = renderLogs;
   SCB.renderBillingTable = renderBillingTable;
 
   function bindEvents() {
+    if ($('btnToggleTheme')) {
+      $('btnToggleTheme').onclick = () => {
+        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem(THEME_KEY, currentTheme);
+        applyTheme();
+        playSound('click');
+      };
+    }
     $('btnToggleSound').onclick = () => {
       soundEnabled = !soundEnabled;
       localStorage.setItem(SOUND_KEY, String(soundEnabled));
@@ -457,7 +540,38 @@
       render();
     };
 
+    if ($('btnCloseEmergency')) {
+      $('btnCloseEmergency').onclick = () => {
+        const { v, c } = state.power;
+        const { maxVolt, maxAmp, maxSmoke } = clampSafetyThresholds(state.config);
+        ackFaultKey = (state.smoke >= maxSmoke && mq2WarmupSec <= 0) ? 'SMOKE' : (v >= maxVolt) ? 'OVER_VOLT' : (c >= maxAmp) ? 'OVER_AMP' : 'ANY';
+        $('emergencyModal').classList.add('hidden');
+      };
+    }
+    if ($('btnSilenceAlarm')) {
+      $('btnSilenceAlarm').onclick = () => {
+        soundEnabled = false;
+        localStorage.setItem(SOUND_KEY, 'false');
+        syncAlarmLoop(false);
+        renderSoundButton();
+        toast('ปิดเสียงไซเรนแล้ว', 'info');
+      };
+    }
+    if ($('btnEmergencyReset')) {
+      $('btnEmergencyReset').onclick = () => {
+        if ($('btnTestReset')) $('btnTestReset').click();
+      };
+    }
+    if ($('btnTestWarmup')) {
+      $('btnTestWarmup').onclick = () => {
+        state.simFault = null;
+        startMq2Warmup(60);
+        toast('เริ่มนับถอยหลังอุ่นเซนเซอร์ MQ-2 (60 วินาที)', 'info');
+        render();
+      };
+    }
     $('btnTestSmoke').onclick = () => {
+      startMq2Warmup(0);
       state.simFault = 'SMOKE';
       state.config.channels.forEach((c) => { c.state = false; });
       state.smoke = Math.min(95, state.config.maxSmoke + 15);
@@ -467,6 +581,8 @@
     };
 
     $('btnTestReset').onclick = () => {
+      startMq2Warmup(0);
+      ackFaultKey = null;
       state.simFault = null;
       state.smoke = 8;
       state.power.v = 0;
@@ -496,9 +612,20 @@
     };
   }
 
+  function runIntroChoreography() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!Element.prototype.animate) return;
+    const COUT = 'cubic-bezier(.33, 1, .68, 1)';
+
+    document.querySelectorAll('#channelGrid .ch-card').forEach((card, idx) => {
+      card.animate([{ transform: 'translateY(14px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: 180 + idx * 65, easing: COUT, fill: 'both' });
+    });
+  }
+
   function start() {
     bindEvents();
     render();
+    runIntroChoreography();
     syncDevice();
     fetchCloudConfig(true);
     fetchCloudLogs(true);
