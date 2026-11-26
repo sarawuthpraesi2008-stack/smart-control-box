@@ -86,6 +86,9 @@
     } else if (kind === 'success') {
       playTone(1046, 0.09, 'sine', 0.06, 0);
       playTone(1318, 0.14, 'sine', 0.06, 0.08);
+    } else if (kind === 'error') {
+      playTone(320, 0.08, 'sawtooth', 0.10, 0);
+      playTone(240, 0.12, 'sawtooth', 0.10, 0.09);
     } else if (kind === 'alarm') {
       // High-urgency industrial dual-tone siren (louder + piercing sweep)
       playTone(1380, 0.18, 'sawtooth', 0.28, 0);
@@ -378,7 +381,7 @@
       render();
       syncDevice();
     };
-    $('btnManualSync').onclick = syncDevice;
+    $('btnManualSync').onclick = () => { playSound('click'); syncDevice(); };
     $('btnRetrySync').onclick = syncDevice;
     $('btnFetchCloudLogs').onclick = () => fetchCloudLogs(false);
     $('logFilter').onchange = renderLogs;
@@ -431,20 +434,26 @@
         document.querySelectorAll('#weekdaySelector input').forEach((cb) => {
           cb.checked = !days || days.includes(cb.value);
         });
+        playSound('click');
         $('scheduleModal').classList.remove('hidden');
       }
     };
 
     $('btnCloseSchedX').onclick = () => $('scheduleModal').classList.add('hidden');
     $('btnCancelSched').onclick = () => $('scheduleModal').classList.add('hidden');
-    $('btnClearSchedule').onclick = () => saveSchedule('', '', '');
-    $('btnSaveSchedule').onclick = () => {
+    $('btnClearSchedule').onclick = async () => {
+      playSound('click');
+      await saveSchedule('', '', '');
+      playSound('success');
+    };
+    $('btnSaveSchedule').onclick = async () => {
       const st = $('schedStart').value;
       const sp = $('schedStop').value;
       const days = [...document.querySelectorAll('#weekdaySelector input:checked')].map((c) => c.value).join(',');
-      if (!st && !sp) return toast('กรุณาระบุเวลาอย่างน้อย 1 ช่อง', 'error');
-      if (!days) return toast('กรุณาเลือกวันทำงาน', 'error');
-      saveSchedule(st, sp, days);
+      if (!st && !sp) { playSound('error'); return toast('กรุณาระบุเวลาอย่างน้อย 1 ช่อง', 'error'); }
+      if (!days) { playSound('error'); return toast('กรุณาเลือกวันทำงาน', 'error'); }
+      await saveSchedule(st, sp, days);
+      playSound('success');
     };
 
     $('btnOpenSettings').onclick = () => {
@@ -462,6 +471,7 @@
           <input id="cfgName_${ch.id}" type="text" value="${esc(ch.name)}" class="input" />
         </div>
       `).join('');
+      playSound('click');
       $('settingsModal').classList.remove('hidden');
     };
     $('btnCloseSettingsX').onclick = () => $('settingsModal').classList.add('hidden');
