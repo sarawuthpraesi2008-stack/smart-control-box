@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root, [data-theme="dark"] {
+      color-scheme: dark;
       --bg: #0E0D0C;
       --surface: #161412;
       --surface-raised: #1D1A17;
@@ -26,6 +27,12 @@
       --warn: #E09F3E;
       --err: #E05252;
       --err-soft: rgba(224, 82, 82, 0.14);
+      --pcb-dot: rgba(197, 121, 75, 0.14);
+      --grid-line: rgba(197, 121, 75, 0.055);
+      --lcd-bg: #100E0C;
+      --lcd-val: #F0B68A;
+      --lcd-lbl: #8A7E74;
+      --spark-color: #C5794B;
       --radius: 6px;
       --radius-sm: 4px;
       --font-display: 'Archivo', 'IBM Plex Sans Thai', sans-serif;
@@ -34,23 +41,31 @@
     }
 
     [data-theme="light"] {
-      --bg: #F1ECE6;
-      --surface: #FAF7F3;
-      --surface-raised: #FFFFFF;
-      --surface-muted: #E9E2D9;
-      --border: #D8CFC4;
-      --border-strong: #BFB2A3;
-      --text: #1A1613;
-      --text-secondary: #52473E;
-      --text-muted: #7C7066;
-      --accent: #A35124;
-      --accent-dim: #7A3B18;
-      --accent-soft: rgba(163, 81, 36, 0.10);
-      --ok: #15803D;
-      --ok-soft: rgba(21, 128, 61, 0.10);
-      --warn: #B45309;
-      --err: #C82829;
-      --err-soft: rgba(200, 40, 41, 0.10);
+      color-scheme: light;
+      /* Original Cool-Slate & Cobalt-Cyan PCB Light Theme */
+      --bg: #e4ebf3;
+      --surface: #f4f7fb;
+      --surface-raised: #f8fafd;
+      --surface-muted: #e8eff7;
+      --border: #ccd8e6;
+      --border-strong: #b4c5d8;
+      --text: #132035;
+      --text-secondary: #43566e;
+      --text-muted: #60748c;
+      --accent: #1348a8;
+      --accent-dim: #0e78b8;
+      --accent-soft: #e2eefb;
+      --ok: #10b981;
+      --ok-soft: #e0f5ec;
+      --warn: #d97706;
+      --err: #dc2626;
+      --err-soft: #fae8e8;
+      --pcb-dot: rgba(19, 72, 168, 0.12);
+      --grid-line: rgba(56, 217, 245, 0.06);
+      --lcd-bg: #111c2e;
+      --lcd-val: #38d9f5;
+      --lcd-lbl: #94a3b8;
+      --spark-color: #38d9f5;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -59,7 +74,9 @@
       margin: 0;
       padding: 0;
       min-height: 100vh;
-      background: var(--bg);
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--pcb-dot) 1px, transparent 1px);
+      background-size: 20px 20px;
       color: var(--text);
       font-family: var(--font-sans);
       font-size: 13.5px;
@@ -571,6 +588,13 @@
       color: var(--text);
     }
     .input { width: 100%; }
+    input[type="time"] { min-height: 38px; font-size: 13px; }
+    [data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: brightness(1.8) contrast(1.2);
+      opacity: 0.92;
+      cursor: pointer;
+    }
+
 
     .table-wrap { overflow-x: auto; max-height: 280px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -710,6 +734,102 @@
       margin-bottom: 8px;
     }
 
+    [data-theme="light"] .topbar-wrap {
+      background: linear-gradient(120deg, #103f9e 0%, #0d6eb8 58%, #14a6c2 100%);
+      border-bottom-color: rgba(255, 255, 255, 0.18);
+      color: #f4f8ff;
+    }
+    [data-theme="light"] .topbar-wrap .brand-sub,
+    [data-theme="light"] .topbar-wrap .brand-sep { color: rgba(235, 245, 255, 0.78); }
+    [data-theme="light"] .topbar-wrap .status-readout,
+    [data-theme="light"] .topbar-wrap .icon-btn {
+      background: rgba(15, 23, 42, 0.22);
+      border-color: rgba(255, 255, 255, 0.26);
+      color: #f4f8ff;
+    }
+    [data-theme="light"] .topbar-wrap .mode-btn { background: #fbbf24; border-color: #fbbf24; color: #0f172a; }
+    [data-theme="light"] .topbar-wrap .mode-btn.is-live { background: #34d399; border-color: #34d399; color: #052e16; }
+
+    .pzem-cell {
+      background-color: var(--lcd-bg);
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    .pzem-lbl { color: var(--lcd-lbl); }
+    .pzem-val { color: var(--lcd-val); }
+    .spark-box {
+      background-color: var(--lcd-bg);
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 14px 14px;
+      border-color: var(--border-strong);
+    }
+    .hw-pcb-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+    .hw-pin-list { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .hw-pin-list span b { color: var(--accent); font-weight: 600; }
+
+    /* Main Dashboard Electronic PCB Framing */
+    .master-bar, .panel, .ch-card {
+      position: relative;
+    }
+    .master-bar::before, .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent) 0%, transparent 55%);
+      border-radius: var(--radius) var(--radius) 0 0;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .ch-card {
+      background-image: radial-gradient(var(--grid-line) 1px, transparent 1px);
+      background-size: 12px 12px;
+    }
+    .ch-card::after {
+      content: '';
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      pointer-events: none;
+    }
+    .ch-card.is-on::after {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .section-head {
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      margin-right: 8px;
+      border-radius: 1px;
+      background: var(--accent);
+      vertical-align: middle;
+    }
+    .pcb-trace-divider {
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--border) 35%, transparent 100%);
+      opacity: 0.6;
+    }
+
     .safety-footer {
       text-align: center;
       font-size: 11px;
@@ -770,6 +890,17 @@
   </header>
 
   <main class="container main">
+
+    <!-- PCB HARDWARE TELEMETRY STRIP -->
+    <div class="hw-pcb-bar mono">
+      <div class="hw-pin-list">
+        <span><b>MCU</b> ESP32-WROOM</span>
+        <span><b>RELAY</b> GPIO 26·27·14·13 (ACTIVE-HIGH)</span>
+        <span><b>PZEM</b> UART2 RX16/TX17</span>
+        <span><b>MQ-2</b> ADC1 GPIO34</span>
+      </div>
+      <span>BUS V0–V22 · SYNC 15s/120s</span>
+    </div>
 
     <!-- MASTER COMMAND BAR -->
     <section class="master-bar">
@@ -886,11 +1017,11 @@
           </div>
           <div class="spark-box">
             <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);">
-              <span>POWER TREND (W)</span>
-              <span id="lblSparkMax" class="mono" style="color:var(--accent);">0W</span>
+              <span style="color:var(--lcd-lbl);">OSC · POWER TREND (W)</span>
+              <span id="lblSparkMax" class="mono" style="color:var(--spark-color);">0W</span>
             </div>
             <svg id="powerSparkline" class="spark-svg" viewBox="0 0 200 32" preserveAspectRatio="none">
-              <polyline id="sparkLinePath" fill="none" stroke="#C5794B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="0,30 200,30" />
+              <polyline id="sparkLinePath" fill="none" stroke="var(--spark-color)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="0,30 200,30" />
             </svg>
           </div>
         </div>
@@ -1133,8 +1264,8 @@
     </div>
   </div>
 
-  <script src="core.js?v=23"></script>
-  <script src="api.js?v=23"></script>
-  <script src="app.js?v=23"></script>
+  <script src="core.js?v=26"></script>
+  <script src="api.js?v=26"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>
