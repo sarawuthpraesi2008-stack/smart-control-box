@@ -154,20 +154,27 @@
 
   async function syncSettingsToCloud(thresholdsChanged) {
     const csv = formatSafetyThresholds(state.config);
+    const rateVal = Number(state.config.rate) || 4.5;
+    const chNames = state.config.channels.map((c) => c.name);
     if (state.config.mode === 'LIVE' && state.config.token) {
+      const pairs = [
+        `V10=Web%20Dashboard`,
+        `V13=${encodeURIComponent(state.config.resetCycleDays)}`,
+        `V5=${encodeURIComponent(csv)}`,
+        `V18=${encodeURIComponent(rateVal.toFixed(2))}`,
+        ...chNames.map((n, i) => `V${19 + i}=${encodeURIComponent(n)}`),
+      ];
       try {
-        await blynkBatch(
-          `V10=Web%20Dashboard&V13=${encodeURIComponent(state.config.resetCycleDays)}&V5=${encodeURIComponent(csv)}`
-        );
+        await blynkBatch(pairs.join('&'));
       } catch (_) {
         let anyOk = false;
-        for (const p of [`V10=Web%20Dashboard`, `V13=${encodeURIComponent(state.config.resetCycleDays)}`, `V5=${encodeURIComponent(csv)}`]) {
+        for (const p of pairs) {
           try { await blynkUpdate(p); anyOk = true; } catch (__) {}
         }
-        if (!anyOk && SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V13/V5 ไป Blynk ไม่สำเร็จ (เช็ก Datastream V5=String, V13=Int)', 'error');
+        if (!anyOk && SCB.toast) SCB.toast('บันทึกในเครื่องแล้ว แต่ส่งค่า V5–V22 ไป Blynk ไม่สำเร็จ', 'error');
       }
     }
-    postToGas({ type: 'config', rate: Number(state.config.rate) || 4.5, channelNames: state.config.channels.map((c) => c.name) });
+    postToGas({ type: 'config', rate: rateVal, channelNames: chNames });
     if (thresholdsChanged) {
       const msg = `อัปเดตเกณฑ์ตัดไฟ (V5): แรงดัน >= ${state.config.maxVolt}V | กระแส >= ${state.config.maxAmp.toFixed(1)}A | ควัน >= ${state.config.maxSmoke}%`;
       pushLog('SAFETY CONFIG', msg, 'Web Dashboard', 'SUCCESS', true);
@@ -219,7 +226,7 @@
 
       if (state.isOnline) {
         const getRes = await fetchWithTimeout(
-          `${base}/get?token=${encodeURIComponent(state.config.token)}&V0&V1&V2&V3&V5&V6&V7&V8&V9&V11&V12&V13`
+          `${base}/get?token=${encodeURIComponent(state.config.token)}&V0&V1&V2&V3&V5&V6&V7&V8&V9&V11&V12&V13&V18&V19&V20&V21&V22`
         );
         if (getRes.ok) {
           const d = await getRes.json();
@@ -240,6 +247,13 @@
             const limits = parseSafetyThresholds(d.V5);
             if (limits) Object.assign(state.config, limits);
           }
+          if (d.V18 !== undefined && !Number.isNaN(Number(d.V18)) && Number(d.V18) >= 0.1 && Number(d.V18) <= 20) {
+            state.config.rate = Number(d.V18);
+          }
+          state.config.channels.forEach((ch, idx) => {
+            const bName = d[`V${19 + idx}`];
+            if (bName !== undefined && String(bName).trim().length > 0) ch.name = String(bName).trim();
+          });
         }
       }
     } catch (_) {
