@@ -1,44 +1,56 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SMART CONTROL BOX — Power &amp; Safety Monitor</title>
+  <title>SMART CONTROL BOX — Power &amp; Safety Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      /* Soft, eye-friendly cool-slate & pearl palette (นวลตา ไม่ขาวจ้า) */
-      --bg: #e4ebf3;
-      --surface: #f4f7fb;
-      --surface-raised: #f8fafd;
-      --surface-muted: #e8eff7;
-      --border: #ccd8e6;
-      --border-strong: #b4c5d8;
-      --text: #132035;
-      --text-secondary: #43566e;
-      --text-muted: #60748c;
-      --cobalt: #1348a8;
-      --cobalt-mid: #0e78b8;
-      --cyan: #15a8c4;
-      --grad-hero: linear-gradient(128deg, #103f9e 0%, #0d6eb8 54%, #14a6c2 100%);
-      --grad-card-on: linear-gradient(95deg, #1348a8 0%, #0e82c4 58%, #16aec9 100%);
-      --accent-soft: #e2eefb;
-      --accent-border: #9ec5ee;
-      --pzem-bg: #111c2e;
-      --pzem-border: #23334d;
-      --ok: #10b981;
-      --ok-soft: #e0f5ec;
-      --warn: #f59e0b;
-      --err: #dc2626;
-      --err-soft: #fae8e8;
-      --radius: 14px;
-      --radius-sm: 10px;
-      --shadow-card: 0 6px 18px -6px rgba(19, 44, 84, 0.10);
-      --shadow-float: 0 10px 26px -8px rgba(19, 44, 84, 0.14);
+    :root, [data-theme="dark"] {
+      --bg: #0E0D0C;
+      --surface: #161412;
+      --surface-raised: #1D1A17;
+      --surface-muted: #12100E;
+      --border: #2B2521;
+      --border-strong: #3E352E;
+      --text: #EDE3DA;
+      --text-secondary: #B6AAA0;
+      --text-muted: #7C7168;
+      --accent: #C5794B;
+      --accent-dim: #8C5130;
+      --accent-soft: rgba(197, 121, 75, 0.12);
+      --ok: #2EB67D;
+      --ok-soft: rgba(46, 182, 125, 0.12);
+      --warn: #E09F3E;
+      --err: #E05252;
+      --err-soft: rgba(224, 82, 82, 0.14);
+      --radius: 6px;
+      --radius-sm: 4px;
+      --font-display: 'Archivo', 'IBM Plex Sans Thai', sans-serif;
       --font-sans: 'IBM Plex Sans Thai', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #F1ECE6;
+      --surface: #FAF7F3;
+      --surface-raised: #FFFFFF;
+      --surface-muted: #E9E2D9;
+      --border: #D8CFC4;
+      --border-strong: #BFB2A3;
+      --text: #1A1613;
+      --text-secondary: #52473E;
+      --text-muted: #7C7066;
+      --accent: #A35124;
+      --accent-dim: #7A3B18;
+      --accent-soft: rgba(163, 81, 36, 0.10);
+      --ok: #15803D;
+      --ok-soft: rgba(21, 128, 61, 0.10);
+      --warn: #B45309;
+      --err: #C82829;
+      --err-soft: rgba(200, 40, 41, 0.10);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -47,12 +59,10 @@
       margin: 0;
       padding: 0;
       min-height: 100vh;
-      background-color: var(--bg);
-      background-image: radial-gradient(rgba(19, 72, 168, 0.10) 1px, transparent 1px);
-      background-size: 20px 20px;
+      background: var(--bg);
       color: var(--text);
       font-family: var(--font-sans);
-      font-size: 14px;
+      font-size: 13.5px;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
@@ -63,179 +73,117 @@
     button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
     button { cursor: pointer; border: none; background: none; padding: 0; }
     button:focus-visible, input:focus-visible, select:focus-visible {
-      outline: 2px solid var(--cobalt);
-      outline-offset: 2px;
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
     }
 
     .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
     .hidden { display: none !important; }
-    .container { max-width: 1152px; width: 100%; margin: 0 auto; padding: 0 16px; }
+    .container { max-width: 1180px; width: 100%; margin: 0 auto; padding: 0 20px; }
 
-    /* HERO HEADER */
-    .hero {
-      position: relative;
-      overflow: hidden;
-      background: var(--grad-hero);
-      color: #f4f8ff;
-      padding-bottom: 48px;
-    }
-
-    .pcb-grid {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-      background-size: 24px 24px, 48px 48px, 48px 48px;
+    /* PRECISION TOP INSTRUMENT BAR (No bloated marketing hero) */
+    .topbar-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
     }
 
     .topbar {
-      position: relative;
-      z-index: 2;
-      height: 62px;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
     }
 
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: 9px;
-      background: rgba(15, 23, 42, 0.22);
-      border: 1px solid rgba(255, 255, 255, 0.26);
-      display: grid;
-      place-items: center;
-    }
-
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .led-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #6ee7b7;
-      box-shadow: 0 0 10px #6ee7b7;
-      display: inline-block;
+      background: var(--ok);
+      flex-shrink: 0;
     }
+    .led-dot.is-offline { background: var(--err); }
 
-    .led-dot.is-offline {
-      background: #fb7185;
-      box-shadow: 0 0 10px #fb7185;
+    .brand-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      font-size: 13px;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
+    .brand-sep { color: var(--border-strong); margin: 0 2px; }
+    .brand-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
-    .brand-title { font-weight: 700; letter-spacing: 0.02em; font-size: 15px; }
-    .brand-pro { font-weight: 500; opacity: 0.82; }
+    .top-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-    .top-actions { display: flex; align-items: center; gap: 8px; }
-    .status-pill {
+    .status-readout {
       display: flex;
       align-items: center;
-      gap: 7px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.20);
-      border: 1px solid rgba(255, 255, 255, 0.20);
+      gap: 6px;
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-muted);
       font-size: 11px;
+      color: var(--text-secondary);
     }
 
     .mode-btn {
-      padding: 6px 12px;
-      border-radius: 999px;
+      height: 30px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
       font-size: 11px;
-      font-weight: 700;
-      background: #fbbf24;
-      color: #0f172a;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-      transition: filter 120ms ease, transform 80ms ease;
-    }
-    .mode-btn:hover { filter: brightness(1.06); }
-    .mode-btn:active { transform: scale(0.97); }
-    .mode-btn.is-live { background: #34d399; color: #052e16; }
-
-    .gear-btn {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: rgba(15, 23, 42, 0.20);
-      border: 1px solid rgba(255, 255, 255, 0.26);
-      color: #fff;
-      display: grid;
-      place-items: center;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      border: 1px solid var(--warn);
+      background: rgba(224, 159, 62, 0.14);
+      color: var(--warn);
       transition: background 120ms ease;
     }
-    .gear-btn:hover { background: rgba(255, 255, 255, 0.22); }
-
-    .hero-body {
-      position: relative;
-      z-index: 2;
-      padding: 14px 0 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
+    .mode-btn:hover { background: rgba(224, 159, 62, 0.24); }
+    .mode-btn.is-live {
+      border-color: var(--ok);
+      background: var(--ok-soft);
+      color: var(--ok);
     }
 
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.22);
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      font-size: 10px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+      display: inline-grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      transition: border-color 120ms ease, color 120ms ease;
     }
+    .icon-btn:hover { border-color: var(--accent); color: var(--text); }
+    .icon-btn.is-muted { opacity: 0.45; }
 
-    .hero-title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.25; }
-    .hero-sub { margin: 6px 0 0; font-size: 13px; color: rgba(235, 245, 255, 0.90); }
-    .hero-chip { flex-shrink: 0; opacity: 0.92; }
-
-    .hero-wave {
-      position: absolute;
-      left: 0;
-      bottom: -1px;
-      width: 100%;
-      height: 44px;
-      color: var(--bg);
-      display: block;
-    }
-
-    /* MAIN */
+    /* MAIN WORKSPACE */
     .main {
-      position: relative;
-      z-index: 5;
-      margin-top: -30px;
-      padding-bottom: 48px;
+      padding: 18px 0 36px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
 
-    /* CARDS */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-card);
-    }
-
-    .card-accent { border-top: 2px solid var(--cobalt-mid); }
-
-    /* FLOATING MASTER BAR */
+    /* COMMAND STRIP (Master Load + Thresholds + Master Actions) */
     .master-bar {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: var(--shadow-float);
-      padding: 16px 20px;
+      border-radius: var(--radius);
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -244,64 +192,36 @@
     }
 
     .master-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .load-box {
+
+    .metric-inline {
       display: flex;
       align-items: center;
       gap: 12px;
       padding-right: 20px;
       border-right: 1px solid var(--border);
     }
-    .load-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-    .load-val { font-size: 22px; font-weight: 700; color: var(--cobalt); line-height: 1.15; }
-    .load-val span.dim { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .kicker {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .load-val { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.15; }
+    .load-val .dim { font-size: 12px; color: var(--text-muted); font-weight: 400; }
 
-    .mini-bars { display: flex; align-items: flex-end; gap: 4px; height: 28px; }
-    .mini-bar { width: 8px; border-radius: 3px; background: #cbd7e6; transition: background 150ms ease; }
-    .mini-bar.is-on { background: var(--cobalt); }
+    .mini-bars { display: flex; align-items: flex-end; gap: 3px; height: 24px; }
+    .mini-bar { width: 5px; border-radius: 1px; background: var(--border-strong); transition: background 120ms ease; }
+    .mini-bar.is-on { background: var(--accent); }
 
-    .auto-box { display: flex; align-items: center; gap: 12px; }
-    .auto-title { font-size: 12px; font-weight: 700; color: var(--text); }
+    .thresh-val { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
     .pin-tag {
       font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 5px;
-      background: var(--accent-soft);
-      color: var(--cobalt);
-      font-weight: 700;
-      margin-left: 4px;
-    }
-    .auto-sub { font-size: 11px; color: var(--text-muted); }
-
-    /* SWITCH */
-    .switch-track {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      width: 48px;
-      height: 28px;
-      padding: 3px;
-      border-radius: 999px;
+      padding: 1px 5px;
+      border-radius: 3px;
       border: 1px solid var(--border-strong);
-      background: var(--surface-muted);
-      transition: background 180ms ease, border-color 180ms ease;
-      flex-shrink: 0;
-    }
-    .switch-track.is-on {
-      background: var(--cobalt);
-      border-color: var(--cobalt);
-    }
-    .switch-track:disabled { opacity: 0.45; cursor: not-allowed; }
-    .switch-knob {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #8da1b8;
-      transform: translateX(0);
-      transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1), background 180ms ease;
-    }
-    .switch-track.is-on .switch-knob {
-      background: #f8fafc;
-      transform: translateX(20px);
+      color: var(--accent);
+      margin-left: 4px;
     }
 
     /* BUTTONS */
@@ -311,72 +231,60 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      min-height: 38px;
-      padding: 0 14px;
+      height: 34px;
+      padding: 0 12px;
       border-radius: var(--radius-sm);
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 600;
       border: 1px solid var(--border-strong);
       background: var(--surface-raised);
       color: var(--text);
-      transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+      transition: border-color 120ms ease, background 120ms ease;
       white-space: nowrap;
     }
-    .btn:hover { background: var(--surface-muted); border-color: var(--cobalt-mid); }
-    .btn:active { transform: scale(0.98); }
+    .btn:hover { border-color: var(--accent); background: var(--surface-muted); }
+    .btn:active { transform: translateY(1px); }
     .btn-primary {
-      background: var(--grad-card-on);
-      border-color: transparent;
-      color: #f8fafc;
-      box-shadow: 0 3px 10px rgba(19, 72, 168, 0.22);
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #120E0C;
     }
-    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-primary:hover { background: #D68A5B; border-color: #D68A5B; color: #120E0C; }
+    [data-theme="light"] .btn-primary { color: #FFF; }
+    [data-theme="light"] .btn-primary:hover { background: var(--accent-dim); color: #FFF; }
+
     .btn-danger-soft {
       background: var(--err-soft);
-      border-color: #f0b6b6;
-      color: #b91c1c;
+      border-color: rgba(224, 82, 82, 0.45);
+      color: var(--err);
     }
-    .btn-danger-soft:hover { background: #f7d5d5; }
+    .btn-danger-soft:hover { background: rgba(224, 82, 82, 0.24); border-color: var(--err); }
+
     .btn-danger {
       background: var(--err);
       border-color: var(--err);
       color: #fff;
     }
-
-    /* SYSTEM TEST BAR (Visible in SIMULATION mode) */
-    .test-bar {
-      background: #e9eff7;
-      border: 1px dashed var(--accent-border);
-      border-radius: 12px;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .test-bar-title { font-size: 12px; font-weight: 700; color: var(--cobalt); display: flex; align-items: center; gap: 6px; }
-    .test-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .btn-sm { min-height: 32px; padding: 0 10px; font-size: 11px; }
+    .btn-sm { height: 28px; padding: 0 9px; font-size: 11px; }
 
     /* ALERTS */
     .alert-safety {
-      border-radius: 12px;
-      background: #dc2626;
+      border-radius: var(--radius);
+      background: var(--err);
       color: #fff;
-      padding: 14px 18px;
+      padding: 11px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28);
+      border: 1px solid rgba(255,255,255,0.2);
     }
     .alert-offline {
-      border-radius: 12px;
+      border-radius: var(--radius);
       background: var(--err-soft);
-      border: 1px solid #f0b6b6;
-      color: #991b1b;
-      padding: 12px 16px;
+      border: 1px solid rgba(224, 82, 82, 0.45);
+      color: var(--err);
+      padding: 10px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -384,176 +292,267 @@
       font-size: 12px;
     }
 
-    /* POWER & SAFETY GRID */
-    .power-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
-      gap: 18px;
-    }
-
-    .panel-pad { padding: 18px 20px; }
-    .panel-head {
+    /* SIMULATION TEST BENCH */
+    .test-bar {
+      background: var(--surface-muted);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 9px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
       flex-wrap: wrap;
-      margin-bottom: 14px;
     }
+    .test-bar-title { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--accent); }
+    .test-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
+    /* SECTION HEADERS */
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
     .section-title {
       margin: 0;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--cobalt);
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
     }
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 14px;
-      border-radius: 2px;
-      background: var(--grad-hero);
-      display: inline-block;
-    }
-    .section-sub { margin: 2px 0 0 12px; font-size: 11px; color: var(--text-muted); }
+    .section-meta { font-size: 11px; color: var(--text-muted); }
 
-    /* PZEM 6-CELL DIGITAL DISPLAY */
-    .pzem-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .pzem-cell {
-      background: var(--pzem-bg);
-      border: 1px solid var(--pzem-border);
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.42);
-      text-align: right;
-    }
-    .pzem-val { font-size: 22px; font-weight: 700; color: #38d9f5; line-height: 1.2; }
-    .pzem-val.is-energy { color: #34d399; }
-    .pzem-val.is-danger { color: #fb7185; }
-    .pzem-lbl { font-size: 11px; color: #94a3b8; text-align: left; margin-top: 6px; }
-
-    /* RIGHT STACK: COST + MQ-2 */
-    .side-stack { display: flex; flex-direction: column; gap: 16px; }
-    .cost-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      background: linear-gradient(155deg, #f6f9fd 0%, #e7f0fb 100%);
-    }
-    .cost-num { font-size: 32px; font-weight: 700; color: var(--text); }
-    .rate-pill {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      border: 1px solid var(--accent-border);
-      color: var(--cobalt);
-    }
-
-    .smoke-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: var(--ok-soft);
-      color: #065f46;
-      border: 1px solid #9be4c6;
-    }
-    .smoke-badge.is-danger {
-      background: var(--err);
-      color: #fff;
-      border-color: var(--err);
-    }
-    .smoke-track {
-      width: 100%;
-      height: 10px;
-      border-radius: 999px;
-      background: #d8e3ef;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .smoke-fill {
-      height: 100%;
-      background: var(--ok);
-      transition: width 250ms ease, background 200ms ease;
-    }
-
-    /* 4-CHANNEL SPLIT-TONE CARDS */
+    /* 4-CHANNEL RELAY MATRIX */
     .ch-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
+      gap: 12px;
     }
     .ch-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      box-shadow: var(--shadow-card);
-      transition: border-color 150ms ease, box-shadow 150ms ease;
+      transition: border-color 140ms ease;
     }
     .ch-card.is-on {
-      border-color: var(--cobalt-mid);
-      box-shadow: 0 8px 20px -6px rgba(19, 72, 168, 0.22);
+      border-color: var(--accent);
+      box-shadow: inset 0 2px 0 0 var(--accent);
     }
-    .ch-body { padding: 16px 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+    .ch-card.is-pending { opacity: 0.65; }
+
+    .ch-body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
     .ch-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .ch-badge {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: var(--surface-muted);
-      color: var(--text-secondary);
+    .ch-id-group { display: flex; align-items: baseline; gap: 8px; }
+    .ch-num {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--text-muted);
     }
-    .ch-card.is-on .ch-badge { background: var(--accent-soft); color: var(--cobalt); }
-    .ch-pins { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
-    .ch-led { width: 10px; height: 10px; border-radius: 50%; background: #c5d3e3; }
-    .ch-card.is-on .ch-led { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
+    .ch-card.is-on .ch-num { color: var(--accent); }
+    .ch-pins { font-size: 10px; color: var(--text-muted); }
+
+    .ch-state-pill {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .ch-card.is-on .ch-state-pill {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
     .ch-main-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .ch-name { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.35; }
+    .ch-name {
+      margin: 0;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* MECHANICAL TOGGLE SWITCH */
+    .switch-track {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 44px;
+      height: 24px;
+      padding: 2px;
+      border-radius: 4px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-muted);
+      transition: background 140ms ease, border-color 140ms ease;
+      flex-shrink: 0;
+    }
+    .switch-track.is-on {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .switch-track:disabled { opacity: 0.4; cursor: not-allowed; }
+    .switch-knob {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      transform: translateX(0);
+      transition: transform 140ms ease-out, background 140ms ease;
+    }
+    .switch-track.is-on .switch-knob {
+      background: #120E0C;
+      transform: translateX(20px);
+    }
+    [data-theme="light"] .switch-track.is-on .switch-knob { background: #FFFFFF; }
 
     .ch-foot {
-      padding: 11px 14px;
-      background: #e9f0f8;
+      padding: 9px 14px;
+      background: var(--surface-muted);
       border-top: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       font-size: 11px;
-      color: var(--text-secondary);
-      transition: background 180ms ease;
-    }
-    .ch-card.is-on .ch-foot {
-      background: var(--grad-card-on);
-      border-top-color: transparent;
-      color: #f8fafc;
+      color: var(--text-muted);
     }
     .ch-sched-btn {
-      font-weight: 700;
+      font-weight: 600;
+      color: var(--text-secondary);
       text-decoration: underline;
-      color: var(--cobalt);
+      text-underline-offset: 2px;
       flex-shrink: 0;
     }
-    .ch-card.is-on .ch-sched-btn { color: #ffffff; }
+    .ch-sched-btn:hover { color: var(--accent); }
+
+    /* TELEMETRY & SAFETY GRID */
+    .power-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    /* UNIFIED HAIRLINE INSTRUMENT MATRIX (Replaces 6 separate AI boxes) */
+    .pzem-matrix {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--border);
+      gap: 1px;
+    }
+    .pzem-cell {
+      background: var(--surface-muted);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .pzem-lbl {
+      font-size: 10.5px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .pzem-val {
+      font-size: 23px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .pzem-val.is-energy { color: var(--ok); }
+    .pzem-val.is-danger { color: var(--err); }
+
+    .pzem-foot {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .load-gauge-track, .smoke-track {
+      width: 100%;
+      height: 6px;
+      border-radius: 2px;
+      background: var(--border);
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .load-gauge-fill, .smoke-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 200ms ease, background 180ms ease;
+    }
+    .spark-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-muted);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .spark-svg { width: 100%; height: 28px; display: block; }
+
+    /* RIGHT COLUMN: COST + SMOKE */
+    .side-stack { display: flex; flex-direction: column; gap: 12px; }
+    .cost-card { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .cost-num { font-size: 30px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+    .rate-pill {
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+    }
+
+    .smoke-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: var(--ok-soft);
+      color: var(--ok);
+      border: 1px solid rgba(46, 182, 125, 0.35);
+    }
+    .smoke-badge.is-danger {
+      background: var(--err);
+      color: #fff;
+      border-color: var(--err);
+    }
 
     /* ACTIVITY LOG */
+    .log-panel { padding: 0; overflow: hidden; }
     .log-head {
-      padding: 14px 20px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -563,26 +562,26 @@
     }
     .log-controls { display: flex; align-items: center; gap: 8px; }
     .select, .input {
-      height: 36px;
-      padding: 0 11px;
-      border-radius: 9px;
+      height: 32px;
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
       border: 1px solid var(--border-strong);
-      background: var(--surface-raised);
+      background: var(--surface-muted);
       font-size: 12px;
       color: var(--text);
     }
     .input { width: 100%; }
 
-    .table-wrap { overflow-x: auto; max-height: 300px; }
+    .table-wrap { overflow-x: auto; max-height: 280px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th, td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
     th {
       position: sticky;
       top: 0;
       background: var(--surface-muted);
-      color: var(--text-secondary);
+      color: var(--text-muted);
       font-size: 10px;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
     }
     tbody tr:hover { background: var(--accent-soft); }
@@ -590,24 +589,24 @@
 
     .src-badge {
       display: inline-block;
-      padding: 2px 9px;
-      border-radius: 999px;
+      padding: 1px 7px;
+      border-radius: 3px;
       font-size: 10px;
-      font-weight: 700;
-      border: 1px solid transparent;
+      font-weight: 600;
+      border: 1px solid var(--border-strong);
+      color: var(--text-secondary);
     }
-    .src-web { background: #e2eefb; color: #1348a8; border-color: #b4d1f2; }
-    .src-blynk { background: #dff3fa; color: #0369a1; border-color: #a4d9ee; }
-    .src-line { background: #e0f5ec; color: #047857; border-color: #9be4c6; }
-    .src-timer { background: #fbf1d9; color: #a16207; border-color: #efd593; }
-    .src-safety { background: #fae8e8; color: #b91c1c; border-color: #f0b6b6; }
+    .src-web { border-color: var(--accent); color: var(--accent); }
+    .src-line { border-color: var(--ok); color: var(--ok); }
+    .src-safety { border-color: var(--err); color: var(--err); }
+    .src-timer { border-color: var(--warn); color: var(--warn); }
 
     /* MODALS */
     .modal-bg {
       position: fixed;
       inset: 0;
       z-index: 60;
-      background: rgba(15, 23, 42, 0.52);
+      background: rgba(10, 9, 8, 0.72);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -615,12 +614,11 @@
     }
     .modal-card {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
       width: 100%;
-      max-width: 430px;
-      padding: 20px;
-      box-shadow: 0 18px 40px rgba(10, 30, 70, 0.26);
+      max-width: 440px;
+      padding: 18px;
       max-height: 90vh;
       overflow-y: auto;
     }
@@ -628,126 +626,96 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-bottom: 12px;
+      padding-bottom: 10px;
       margin-bottom: 14px;
       border-bottom: 1px solid var(--border);
     }
-    .modal-close { font-size: 22px; line-height: 1; color: var(--text-muted); padding: 2px 6px; }
+    .modal-close { font-size: 20px; line-height: 1; color: var(--text-muted); padding: 2px 6px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .field { margin-bottom: 12px; }
-    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+    .field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
 
-    .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+    .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
     .day-chip input { display: none; }
     .day-chip span {
       display: block;
-      padding: 7px 0;
-      border-radius: 8px;
-      background: var(--surface-raised);
+      padding: 6px 0;
+      border-radius: var(--radius-sm);
+      background: var(--surface-muted);
       border: 1px solid var(--border-strong);
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 11.5px;
+      font-weight: 600;
       cursor: pointer;
     }
     .day-chip input:checked + span {
-      background: var(--cobalt);
-      border-color: var(--cobalt);
-      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #120E0C;
     }
+    [data-theme="light"] .day-chip input:checked + span { color: #FFF; }
 
     .modal-foot {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 14px;
       padding-top: 12px;
       border-top: 1px solid var(--border);
     }
 
-    /* TOAST */
+    /* TOAST (Top-Right, never blocks bottom actions) */
     .toast-wrap {
       position: fixed;
       right: 18px;
-      bottom: 18px;
+      top: 72px;
       z-index: 70;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       pointer-events: none;
     }
     .toast-item {
-      padding: 10px 14px;
-      border-radius: 10px;
+      padding: 9px 13px;
+      border-radius: var(--radius-sm);
       font-size: 12px;
-      font-weight: 600;
-      color: #fff;
-      background: #132035;
-      box-shadow: var(--shadow-float);
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface-raised);
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--accent);
     }
-    .toast-item.is-success { background: var(--cobalt); }
-    .toast-item.is-error { background: var(--err); }
+    .toast-item.is-success { border-left-color: var(--ok); }
+    .toast-item.is-error { border-left-color: var(--err); color: #fff; background: #2A1414; }
 
-    @keyframes ledPulse {
-      0%, 100% { box-shadow: 0 0 6px #6ee7b7; opacity: 1; }
-      50% { box-shadow: 0 0 14px #6ee7b7; opacity: 0.72; }
+    .smoke-badge.is-warmup {
+      background: rgba(224, 159, 62, 0.16);
+      color: var(--warn);
+      border-color: rgba(224, 159, 62, 0.45);
     }
-    .led-dot:not(.is-offline) { animation: ledPulse 2.2s ease-in-out infinite; }
-    @keyframes safetyPulse {
-      0%, 100% { box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28); }
-      50% { box-shadow: 0 8px 28px rgba(220, 38, 38, 0.55); }
+    .emergency-card {
+      max-width: 420px;
+      border: 2px solid var(--err);
+      box-shadow: 0 0 0 4px rgba(224, 82, 82, 0.22);
     }
-    .alert-safety:not(.hidden) { animation: safetyPulse 1.3s ease-in-out infinite; }
-    .ch-card.is-on { border-top: 2px solid var(--cobalt); }
-    .ch-card.is-pending { opacity: 0.78; }
-    .ch-state-pill {
+    .emergency-kicker {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: var(--err);
+      color: #fff;
       font-size: 10px;
       font-weight: 700;
-      padding: 1px 7px;
-      border-radius: 999px;
-      background: var(--surface-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .safety-footer {
+      text-align: center;
+      font-size: 11px;
       color: var(--text-muted);
-    }
-    .ch-card.is-on .ch-state-pill {
-      background: var(--ok-soft);
-      color: #047857;
-    }
-    .gear-btn.is-muted { opacity: 0.65; }
-    .pzem-telemetry-foot {
-      margin-top: 12px;
-      padding-top: 12px;
+      padding-top: 14px;
       border-top: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      align-items: center;
-    }
-    .load-gauge-track {
-      width: 100%;
-      height: 8px;
-      border-radius: 999px;
-      background: #d8e3ef;
-      overflow: hidden;
-      margin-top: 6px;
-    }
-    .load-gauge-fill {
-      height: 100%;
-      width: 0%;
-      background: var(--cyan);
-      transition: width 250ms ease, background 200ms ease;
-    }
-    .spark-box {
-      background: var(--pzem-bg);
-      border: 1px solid var(--pzem-border);
-      border-radius: 10px;
-      padding: 8px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .spark-svg { width: 100%; height: 32px; display: block; }
-    @media (max-width: 640px) {
-      .pzem-telemetry-foot { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 1024px) {
@@ -755,225 +723,211 @@
       .ch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
-      .status-pill, .hero-chip { display: none; }
-      .hero-title { font-size: 21px; }
-      .pzem-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .container { padding: 0 12px; }
+      .brand-sub, .brand-sep, .status-readout { display: none; }
+      .pzem-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pzem-foot { grid-template-columns: 1fr; }
       .ch-grid { grid-template-columns: 1fr; }
-      .load-box { padding-right: 0; border-right: none; }
+      .metric-inline { padding-right: 0; border-right: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- HERO HEADER -->
-  <header class="hero">
-    <div class="pcb-grid"></div>
-
+  <!-- PRECISION TOP INSTRUMENT BAR -->
+  <header class="topbar-wrap">
     <div class="container">
       <nav class="topbar">
         <div class="brand">
-          <div class="brand-icon"><span id="headerLed" class="led-dot"></span></div>
-          <span class="brand-title">SMART CONTROL <span class="mono brand-pro">PRO</span></span>
+          <span id="headerLed" class="led-dot"></span>
+          <span class="brand-title">SMART CONTROL BOX</span>
+          <span class="brand-sep">/</span>
+          <span class="brand-sub mono">ESP32 · PZEM-004T · MQ-2</span>
         </div>
 
         <div class="top-actions">
-          <div class="status-pill mono">
-            <span id="deviceStatusText" style="font-weight:700;">ONLINE</span>
-            <span style="opacity:0.5;">•</span>
+          <div class="status-readout mono">
+            <span id="deviceStatusText" style="font-weight:600;">ONLINE</span>
+            <span style="opacity:0.4;">|</span>
             <span id="lastSyncTime">--:--:--</span>
           </div>
           <button id="btnToggleMode" data-testid="mode-toggle" type="button" class="mode-btn mono">SIMULATION</button>
-          <button id="btnToggleSound" data-testid="btn-sound" type="button" class="gear-btn mono" title="เปิด/ปิดเสียง" aria-label="เปิด/ปิดเสียง" aria-pressed="true">🔊</button>
-          <button id="btnOpenSettings" data-testid="btn-settings" type="button" class="gear-btn" title="ตั้งค่า" aria-label="ตั้งค่า">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <button id="btnToggleSound" data-testid="btn-sound" type="button" class="icon-btn mono" title="เปิด/ปิดเสียง" aria-label="เปิด/ปิดเสียง" aria-pressed="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          </button>
+          <button id="btnToggleTheme" data-testid="btn-theme" type="button" class="icon-btn mono" title="สลับโหมดมืด/สว่าง" aria-label="สลับโหมดมืด/สว่าง">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          </button>
+          <button id="btnOpenSettings" data-testid="btn-settings" type="button" class="icon-btn" title="ตั้งค่า" aria-label="ตั้งค่า">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
         </div>
       </nav>
-
-      <div class="hero-body">
-        <div>
-          <div class="hero-badge mono">ESP32 • PZEM-004T • MQ-2 SAFETY</div>
-          <h1 class="hero-title">ควบคุมไฟฟ้าอัจฉริยะ &amp; วัดพลังงาน</h1>
-          <p class="hero-sub">ตัดไฟอัตโนมัติเมื่อแรงดัน/กระแสเกินเกณฑ์ หรือตรวจพบควัน • คำนวณค่าไฟเรียลไทม์</p>
-        </div>
-        <div class="hero-chip" aria-hidden="true">
-          <svg width="124" height="96" viewBox="0 0 132 104" fill="none">
-            <rect x="28" y="16" width="76" height="72" rx="12" fill="white" fill-opacity="0.14" stroke="white" stroke-opacity="0.65" stroke-width="2"/>
-            <rect x="42" y="30" width="48" height="44" rx="6" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
-            <path d="M52 52H60L64 42L70 62L74 52H80" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 30H28M12 44H28M12 58H28M12 72H28M104 30H120M104 44H120M104 58H120M104 72H120" stroke="white" stroke-opacity="0.8" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="12" cy="30" r="3" fill="#6ee7b7"/><circle cx="120" cy="72" r="3" fill="#67e8f9"/>
-          </svg>
-        </div>
-      </div>
     </div>
-
-    <svg class="hero-wave" viewBox="0 0 1440 80" preserveAspectRatio="none">
-      <path fill="currentColor" d="M0,32 C320,88 760,-10 1440,48 L1440,80 L0,80 Z"></path>
-    </svg>
   </header>
 
   <main class="container main">
 
-    <!-- FLOATING MASTER COMMAND BAR -->
+    <!-- MASTER COMMAND BAR -->
     <section class="master-bar">
       <div class="master-left">
-        <div class="load-box">
+        <div class="metric-inline">
           <div>
-            <div class="load-label">โหลดที่ทำงานอยู่</div>
+            <div class="kicker">Active Channels</div>
             <div class="mono load-val"><span id="activeCount">0</span><span class="dim"> / 4 CH</span></div>
           </div>
           <div id="miniLoadBars" class="mini-bars">
-            <div class="mini-bar" style="height:10px;"></div>
-            <div class="mini-bar" style="height:16px;"></div>
-            <div class="mini-bar" style="height:22px;"></div>
-            <div class="mini-bar" style="height:28px;"></div>
+            <div class="mini-bar" style="height:8px;"></div>
+            <div class="mini-bar" style="height:13px;"></div>
+            <div class="mini-bar" style="height:18px;"></div>
+            <div class="mini-bar" style="height:24px;"></div>
           </div>
         </div>
 
-        <div class="auto-box">
-          <div>
-            <div class="auto-title">เกณฑ์ตัดไฟอัตโนมัติ <span class="mono pin-tag">V5</span></div>
-            <div class="auto-sub mono" id="lblMasterThresholds">245V · 10.0A · 60%</div>
-          </div>
+        <div>
+          <div class="kicker">Auto-Cutoff Limits <span class="mono pin-tag">V5</span></div>
+          <div class="thresh-val mono" id="lblMasterThresholds">245V · 10.0A · 60%</div>
         </div>
       </div>
 
       <div class="master-btns">
-        <button id="btnManualSync" type="button" class="btn mono">↻ SYNC</button>
+        <button id="btnManualSync" type="button" class="btn mono">SYNC</button>
         <button id="btnAllOn" data-testid="btn-all-on" type="button" class="btn btn-primary">เปิดทั้งหมด</button>
         <button id="btnAllOffPrompt" data-testid="btn-all-off" type="button" class="btn btn-danger-soft">ปิดทั้งหมด</button>
       </div>
     </section>
 
-    <!-- EMERGENCY & OFFLINE BANNERS -->
+    <!-- ALERTS -->
     <div id="safetyAlert" data-testid="safety-alert" class="alert-safety hidden">
-      <div style="font-size:13px;font-weight:700;" id="safetyAlertText">🚨 แจ้งเตือนความปลอดภัย: ตรวจพบความผิดปกติ!</div>
-      <span class="mono" style="font-size:10px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,0.22);font-weight:700;">AUTO CUTOFF</span>
+      <div style="font-size:12.5px;font-weight:600;" id="safetyAlertText">แจ้งเตือนความปลอดภัย: ตรวจพบความผิดปกติ</div>
+      <span class="mono" style="font-size:10px;padding:2px 8px;border-radius:3px;background:rgba(0,0,0,0.28);font-weight:600;">AUTO CUTOFF</span>
     </div>
 
     <div id="offlineAlert" class="alert-offline hidden">
-      <div><strong>บอร์ดออฟไลน์ (OFFLINE):</strong> <span id="offlineAlertDetail">ไม่สามารถเชื่อมต่อบอร์ดได้ชั่วคราว</span></div>
-      <button id="btnRetrySync" type="button" class="btn btn-danger mono" style="min-height:30px;padding:0 12px;">RETRY</button>
+      <div><strong>OFFLINE:</strong> <span id="offlineAlertDetail">ไม่สามารถเชื่อมต่อบอร์ดได้ชั่วคราว</span></div>
+      <button id="btnRetrySync" type="button" class="btn btn-sm btn-danger mono">RETRY</button>
     </div>
 
-    <!-- SYSTEM TEST BAR (SIMULATION ONLY) -->
+    <!-- SIMULATION TEST BENCH -->
     <section id="simTestBar" class="test-bar">
-      <div class="test-bar-title mono">TEST BENCH <span style="font-weight:500;color:var(--text-muted);">(SIMULATION)</span></div>
+      <div class="test-bar-title mono">SIMULATION BENCH</div>
       <div class="test-btns">
         <button id="btnTestSeq" type="button" class="btn btn-sm">เทสรีเลย์ 1→4</button>
         <button id="btnTestOverVolt" type="button" class="btn btn-sm btn-danger-soft">เทสแรงดันเกิน</button>
         <button id="btnTestOverAmp" type="button" class="btn btn-sm btn-danger-soft">เทสกระแสเกิน</button>
         <button id="btnTestSmoke" type="button" class="btn btn-sm btn-danger-soft">เทสควัน MQ-2</button>
+        <button id="btnTestWarmup" type="button" class="btn btn-sm">เทสอุ่น MQ-2 (60s)</button>
         <button id="btnTestReset" type="button" class="btn btn-sm">รีเซ็ตปกติ</button>
       </div>
     </section>
 
-    <!-- 4-CHANNEL SPLIT-TONE CARDS -->
-    <section>
-      <div class="panel-head" style="margin-bottom:10px;">
-        <h2 class="section-title">แผงควบคุมรีเลย์ 4 ช่อง</h2>
-        <span class="mono" style="font-size:11px;color:var(--text-muted);">RELAY V0–V3 • TIMER V6–V9</span>
+    <!-- 01: RELAY CONTROL DECK -->
+    <section id="secControlDeck">
+      <div class="section-head">
+        <h2 class="section-title">01 / แผงควบคุมรีเลย์ 4 ช่อง</h2>
+        <span class="section-meta mono">RELAY V0–V3 · TIMER V6–V9</span>
       </div>
       <div id="channelGrid" class="ch-grid">
-        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 01</span><span class="ch-pins mono">V0/V6</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 1 (GPIO 26)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
-        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 02</span><span class="ch-pins mono">V1/V7</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 2 (GPIO 27)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
-        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 03</span><span class="ch-pins mono">V2/V8</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 3 (GPIO 14)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
-        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div><span class="ch-badge mono">CH 04</span><span class="ch-pins mono">V3/V9</span></div><div style="display:flex;align-items:center;gap:6px;"><span class="ch-state-pill mono">OFF</span><span class="ch-led"></span></div></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 4 (GPIO 13)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div class="ch-id-group"><span class="ch-num">01</span><span class="ch-pins mono">V0/V6</span></div><span class="ch-state-pill mono">OFF</span></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 1 (GPIO 26)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div class="ch-id-group"><span class="ch-num">02</span><span class="ch-pins mono">V1/V7</span></div><span class="ch-state-pill mono">OFF</span></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 2 (GPIO 27)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div class="ch-id-group"><span class="ch-num">03</span><span class="ch-pins mono">V2/V8</span></div><span class="ch-state-pill mono">OFF</span></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 3 (GPIO 14)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
+        <div class="ch-card"><div class="ch-body"><div class="ch-top"><div class="ch-id-group"><span class="ch-num">04</span><span class="ch-pins mono">V3/V9</span></div><span class="ch-state-pill mono">OFF</span></div><div class="ch-main-row"><h3 class="ch-name">ปลั๊กไฟตัวที่ 4 (GPIO 13)</h3><button type="button" role="switch" aria-checked="false" class="ch-switch switch-track"><span class="switch-knob"></span></button></div></div><div class="ch-foot"><span>ไม่ได้ตั้งเวลา</span><button type="button" class="ch-sched-btn">ตั้งเวลา</button></div></div>
       </div>
     </section>
 
-    <!-- POWER MONITOR (PZEM-004T) & SMOKE SAFETY (MQ-2) -->
-    <section class="power-grid">
-      <div class="card card-accent panel-pad">
-        <div class="panel-head">
+    <!-- 02: POWER TELEMETRY & SAFETY -->
+    <section id="secTelemetry" class="power-grid">
+      <div class="panel">
+        <div class="section-head">
           <div>
-            <h2 class="section-title">มิเตอร์วัดพลังงานไฟฟ้า (PZEM-004T)</h2>
-            <p class="section-sub" id="lblPzemLimits">Open CT สายเมนรวม • ตัดไฟเมื่อ ≥ 245V หรือ ≥ 10.0A</p>
+            <h2 class="section-title">02 / มิเตอร์วัดพลังงานไฟฟ้า (PZEM-004T)</h2>
+            <div class="section-meta" id="lblPzemLimits" style="margin-top:2px;">Open CT สายเมนรวม • ตัดไฟเมื่อ ≥ 245V หรือ ≥ 10.0A</div>
           </div>
+          <span class="section-meta mono">UART2 RX16/TX17</span>
         </div>
 
-        <div class="pzem-grid">
+        <div class="pzem-matrix">
           <div class="pzem-cell">
+            <div class="pzem-lbl">Voltage</div>
             <div class="mono pzem-val" id="valVoltage">0.0V</div>
-            <div class="pzem-lbl">Voltage (แรงดัน)</div>
           </div>
           <div class="pzem-cell" id="boxCurrent">
+            <div class="pzem-lbl">Current</div>
             <div class="mono pzem-val" id="valCurrent">0.000A</div>
-            <div class="pzem-lbl">Current (กระแส)</div>
           </div>
           <div class="pzem-cell">
+            <div class="pzem-lbl">Active Power</div>
             <div class="mono pzem-val" id="valPower">0W</div>
-            <div class="pzem-lbl">Power (กำลังไฟ)</div>
           </div>
           <div class="pzem-cell">
+            <div class="pzem-lbl">Energy</div>
             <div class="mono pzem-val is-energy" id="valEnergy">0.000kWh</div>
-            <div class="pzem-lbl">Energy (หน่วยสะสม)</div>
           </div>
           <div class="pzem-cell">
+            <div class="pzem-lbl">Frequency</div>
             <div class="mono pzem-val" id="valFreq">0.0Hz</div>
-            <div class="pzem-lbl">Frequency (ความถี่)</div>
           </div>
           <div class="pzem-cell">
-            <div class="mono pzem-val" id="valPf">0.00</div>
             <div class="pzem-lbl">Power Factor</div>
+            <div class="mono pzem-val" id="valPf">0.00</div>
           </div>
         </div>
 
-        <div class="pzem-telemetry-foot">
+        <div class="pzem-foot">
           <div>
             <div style="display:flex;justify-content:space-between;font-size:11px;">
-              <span style="color:var(--text-secondary);font-weight:600;">โหลดกระแสเทียบเกณฑ์ V5</span>
-              <span id="lblLoadPct" class="mono" style="font-weight:700;color:var(--cobalt);">0% (0.00 / 10.0A)</span>
+              <span style="color:var(--text-muted);">โหลดกระแสเทียบเกณฑ์ V5</span>
+              <span id="lblLoadPct" class="mono" style="font-weight:600;color:var(--text);">0% (0.00 / 10.0A)</span>
             </div>
             <div class="load-gauge-track"><div id="loadGaugeFill" class="load-gauge-fill"></div></div>
           </div>
           <div class="spark-box">
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;">
-              <span>แนวโน้มกำลังไฟ (W)</span>
-              <span id="lblSparkMax" class="mono" style="color:#38d9f5;">0W</span>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);">
+              <span>POWER TREND (W)</span>
+              <span id="lblSparkMax" class="mono" style="color:var(--accent);">0W</span>
             </div>
             <svg id="powerSparkline" class="spark-svg" viewBox="0 0 200 32" preserveAspectRatio="none">
-              <polyline id="sparkLinePath" fill="none" stroke="#38d9f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="0,30 200,30" />
+              <polyline id="sparkLinePath" fill="none" stroke="#C5794B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="0,30 200,30" />
             </svg>
           </div>
         </div>
       </div>
 
       <div class="side-stack">
-        <div class="card card-accent panel-pad cost-card">
-          <div class="panel-head" style="margin-bottom:8px;">
-            <span style="font-size:12px;font-weight:700;color:var(--cobalt);">ประมาณการค่าไฟสะสม</span>
+        <div class="panel cost-card">
+          <div class="section-head" style="margin-bottom:8px;">
+            <span class="section-title">ประมาณการค่าไฟสะสม</span>
             <span class="mono rate-pill" id="lblRate">4.50 ฿/หน่วย</span>
           </div>
-          <div style="margin:6px 0;">
+          <div style="margin:6px 0 12px;">
             <span class="mono cost-num" id="valCost">0.00</span>
-            <span style="font-size:13px;font-weight:600;color:var(--text-muted);margin-left:4px;">บาท</span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:4px;">บาท</span>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px;">
-            <span id="lblResetCycle" class="mono" style="font-size:11px;color:var(--text-secondary);">รอบรีเซ็ต: รีเซ็ตเอง</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border);">
+            <span id="lblResetCycle" class="mono" style="font-size:11px;color:var(--text-muted);">รอบรีเซ็ต: รีเซ็ตเอง</span>
             <div style="display:flex;align-items:center;gap:8px;">
-              <button id="btnResetCost" data-testid="btn-reset-cost" type="button" class="btn btn-sm btn-danger-soft" style="min-height:28px;font-size:11px;">รีเซ็ตค่าไฟเอง (V13)</button>
+              <button id="btnResetCost" data-testid="btn-reset-cost" type="button" class="btn btn-sm btn-danger-soft">รีเซ็ตค่าไฟเอง (V13)</button>
               <button id="btnOpenBilling" data-testid="btn-billing" type="button" class="ch-sched-btn" style="font-size:11px;">ประวัติบิล</button>
             </div>
           </div>
         </div>
 
-        <div class="card panel-pad" id="smokeCard">
-          <div class="panel-head" style="margin-bottom:10px;">
+        <div class="panel" id="smokeCard">
+          <div class="section-head" style="margin-bottom:10px;">
             <div>
-              <div style="font-size:12px;font-weight:700;color:var(--text);">ตรวจจับควันในตู้ (MQ-2)</div>
-              <div class="mono" id="lblSmokeLimit" style="font-size:10px;color:var(--text-muted);">GPIO 34 • V12 • ตัดไฟ ≥ 60%</div>
+              <div class="section-title">ตรวจจับควัน (MQ-2)</div>
+              <div class="mono" id="lblSmokeLimit" style="font-size:10px;color:var(--text-muted);margin-top:2px;">GPIO 34 • V12 • ตัดไฟ ≥ 60%</div>
             </div>
-            <span id="smokeBadge" class="mono smoke-badge">ปกติ (SAFE)</span>
+            <span id="smokeBadge" class="mono smoke-badge">SAFE</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;">
-            <span style="color:var(--text-secondary);">ระดับความเข้มข้นควัน</span>
-            <span class="mono" style="font-weight:700;" id="valSmoke">0%</span>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;">
+            <span style="color:var(--text-muted);">ระดับควันในตู้</span>
+            <span class="mono" style="font-weight:600;" id="valSmoke">0%</span>
           </div>
+          <div id="mq2WarmupRow" class="mono hidden" style="font-size:10.5px;color:var(--warn);margin-top:6px;">กำลังอุ่นเซนเซอร์ MQ-2 (รอ <span id="mq2WarmupSec">60</span> วิ ก่อนเปิดตัดไฟจากควัน)</div>
           <div class="smoke-track">
             <div id="smokeBar" class="smoke-fill" style="width: 0%;"></div>
           </div>
@@ -981,11 +935,11 @@
       </div>
     </section>
 
-    <!-- ACTIVITY LOG PANEL -->
-    <section class="card card-accent" style="overflow:hidden;">
+    <!-- 03: ACTIVITY LOG -->
+    <section id="secActivityLog" class="panel log-panel">
       <div class="log-head">
         <div style="display:flex;align-items:center;gap:10px;">
-          <h2 class="section-title">ประวัติการสั่งงาน (Activity Log)</h2>
+          <h2 class="section-title">03 / ประวัติการสั่งงาน (Activity Log)</h2>
           <span id="sheetSyncStatus" class="mono rate-pill">LOCAL</span>
         </div>
         <div class="log-controls">
@@ -997,7 +951,7 @@
             <option value="Timer">Timer</option>
             <option value="Safety">Safety Cutoff</option>
           </select>
-          <button id="btnFetchCloudLogs" type="button" class="btn mono" style="min-height:36px;">↻ ดึง LOG</button>
+          <button id="btnFetchCloudLogs" type="button" class="btn btn-sm mono">ดึง LOG</button>
         </div>
       </div>
 
@@ -1015,6 +969,10 @@
         </table>
       </div>
     </section>
+
+    <footer class="safety-footer mono">
+      SMART CONTROL BOX PRO (V0–V22) · PZEM-004T และ MQ-2 เป็นระบบเฝ้าระวังเสริม ไม่ใช่ตัวแทนเบรกเกอร์มาตรฐานหรืออุปกรณ์ดับเพลิงที่ได้รับรอง
+    </footer>
   </main>
 
   <div id="toastContainer" class="toast-wrap"></div>
@@ -1028,11 +986,11 @@
       </div>
       <div class="grid-2">
         <div class="field">
-          <label for="schedStart" style="color:var(--cobalt);">เวลาเปิด (ON)</label>
+          <label for="schedStart">เวลาเปิด (ON)</label>
           <input id="schedStart" type="time" class="input mono" />
         </div>
         <div class="field">
-          <label for="schedStop" style="color:var(--err);">เวลาปิด (OFF)</label>
+          <label for="schedStop">เวลาปิด (OFF)</label>
           <input id="schedStop" type="time" class="input mono" />
         </div>
       </div>
@@ -1079,19 +1037,19 @@
         <label for="cfgRate">อัตราค่าไฟ (บาท/หน่วย)</label>
         <input id="cfgRate" type="number" step="0.01" placeholder="4.50" class="input mono" />
       </div>
-      <div class="field" style="padding:10px 12px;border-radius:10px;background:var(--surface-muted);border:1px solid var(--border);">
-        <label style="color:var(--cobalt);margin-bottom:8px;">เกณฑ์ตัดไฟอัตโนมัติ (V5 · บันทึก Flash + แจ้ง LINE)</label>
+      <div class="field" style="padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface-muted);border:1px solid var(--border);">
+        <label style="color:var(--accent);margin-bottom:8px;">เกณฑ์ตัดไฟอัตโนมัติ (V5 · Flash + LINE)</label>
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
           <div>
-            <label for="cfgMaxVolt" style="font-size:11px;">แรงดัน (230–260V)</label>
+            <label for="cfgMaxVolt" style="font-size:10.5px;">แรงดัน (230–260V)</label>
             <input id="cfgMaxVolt" type="number" min="230" max="260" step="1" value="245" class="input mono" />
           </div>
           <div>
-            <label for="cfgMaxAmp" style="font-size:11px;">กระแส (1–10A)</label>
+            <label for="cfgMaxAmp" style="font-size:10.5px;">กระแส (1–10A)</label>
             <input id="cfgMaxAmp" type="number" min="1" max="10" step="0.5" value="10.0" class="input mono" />
           </div>
           <div>
-            <label for="cfgMaxSmoke" style="font-size:11px;">ควัน (20–90%)</label>
+            <label for="cfgMaxSmoke" style="font-size:10.5px;">ควัน (20–90%)</label>
             <input id="cfgMaxSmoke" type="number" min="20" max="90" step="5" value="60" class="input mono" />
           </div>
         </div>
@@ -1101,7 +1059,7 @@
         <input id="cfgGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="input mono" />
       </div>
       <div class="field">
-        <label for="cfgResetCycle">รอบรีเซ็ตค่าไฟสะสมอัตโนมัติ (V13 + บันทึกประวัติ)</label>
+        <label for="cfgResetCycle">รอบรีเซ็ตค่าไฟสะสมอัตโนมัติ (V13)</label>
         <select id="cfgResetCycle" class="select" style="width:100%;">
           <option value="0">ปิด (รีเซ็ตเอง)</option>
           <option value="1">รีเซ็ตทุก 1 วัน (รายวัน)</option>
@@ -1110,7 +1068,7 @@
         </select>
       </div>
       <div class="field" style="padding-top:10px;border-top:1px solid var(--border);">
-        <label>ชื่ออุปกรณ์ทั้ง 4 ช่อง</label>
+        <label>ชื่ออุปกรณ์ทั้ง 4 ช่อง (V19–V22)</label>
         <div id="channelConfigInputs" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
       <div class="modal-foot" style="justify-content:flex-end;">
@@ -1122,8 +1080,8 @@
 
   <!-- CONFIRM ALL OFF MODAL -->
   <div id="confirmModal" class="modal-bg hidden">
-    <div class="modal-card" style="max-width:340px;border-color:#f0b6b6;">
-      <h3 style="margin:0 0 8px;font-size:15px;color:var(--err);">ยืนยันปิดไฟทุกช่อง?</h3>
+    <div class="modal-card" style="max-width:340px;border-color:rgba(224,82,82,0.5);">
+      <h3 style="margin:0 0 8px;font-size:14px;color:var(--err);">ยืนยันปิดไฟทุกช่อง?</h3>
       <p style="margin:0;font-size:12px;color:var(--text-secondary);">ระบบจะสั่งตัดไฟปลั๊กทั้ง 4 ตัวพร้อมกันทันที</p>
       <div class="modal-foot" style="justify-content:flex-end;">
         <button id="btnCancelConfirm" type="button" class="btn">ยกเลิก</button>
@@ -1159,8 +1117,24 @@
     </div>
   </div>
 
-  <script src="core.js?v=18"></script>
-  <script src="api.js?v=18"></script>
-  <script src="app.js?v=18"></script>
+    <!-- EMERGENCY ALERT POPUP MODAL -->
+  <div id="emergencyModal" data-testid="emergency-modal" class="modal-bg hidden">
+    <div class="modal-card emergency-card">
+      <span class="emergency-kicker mono">EMERGENCY AUTO-CUTOFF</span>
+      <h3 id="emergencyTitle" style="margin:0 0 6px;font-size:16px;color:var(--err);">ตรวจพบความผิดปกติ</h3>
+      <p id="emergencyDetail" style="margin:0 0 14px;font-size:12.5px;color:var(--text-secondary);">ระบบสั่งตัดปลั๊กทั้ง 4 ช่องอัตโนมัติเพื่อความปลอดภัย</p>
+      <div class="modal-foot" style="justify-content:space-between;flex-wrap:wrap;">
+        <button id="btnSilenceAlarm" data-testid="btn-silence-alarm" type="button" class="btn btn-sm">ปิดเสียงไซเรน</button>
+        <div style="display:flex;gap:8px;">
+          <button id="btnEmergencyReset" type="button" class="btn btn-sm btn-danger-soft hidden">รีเซ็ตกลับปกติ</button>
+          <button id="btnCloseEmergency" data-testid="btn-close-emergency" type="button" class="btn btn-sm btn-danger">รับทราบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="core.js?v=23"></script>
+  <script src="api.js?v=23"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>
